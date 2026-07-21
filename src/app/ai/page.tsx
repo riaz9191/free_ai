@@ -8,7 +8,6 @@ import {
   Sparkles,
   MessageSquare,
   ImageIcon,
-  Bot,
   Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -53,13 +52,13 @@ const integrations = [
     status: "live" as const,
   },
   {
-    name: "Autonomous agents",
+    name: "BazaarLink Chat",
     description:
-      "Tool-calling agents that plan and execute multi-step tasks on your behalf.",
-    icon: Bot,
-    href: "#",
-    accent: "59, 130, 246",
-    status: "soon" as const,
+      "Hundreds of models through one OpenAI-compatible gateway. DeepSeek V4 Flash runs free.",
+    icon: MessageSquare,
+    href: "/ai/bazaarlink",
+    accent: "249, 115, 22",
+    status: "live" as const,
   },
 ];
 
