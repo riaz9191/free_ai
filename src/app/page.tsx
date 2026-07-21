@@ -16,6 +16,7 @@ import {
   Star,
   Zap,
   GitFork,
+  FolderGit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -316,16 +317,28 @@ function ChatMockup() {
 export default function Home() {
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-clip bg-background text-foreground">
-      {/* Ambient backdrop */}
+      {/* Ambient backdrop — spans the full page height, not just the viewport */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
       >
-        <div className="absolute inset-0 bg-grid opacity-[0.25] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_0%,black,transparent)]" />
+        <div className="absolute inset-0 bg-grid opacity-[0.25] [mask-image:radial-gradient(ellipse_70%_35%_at_50%_0%,black,transparent)]" />
         <div className="bg-noise absolute inset-0 opacity-[0.03] mix-blend-overlay" />
+
+        {/* Hero */}
         <div className="animate-blob absolute -top-40 left-1/4 size-[36rem] rounded-full bg-violet-600/30 blur-[120px]" />
         <div className="animate-blob absolute top-32 -right-32 size-[32rem] rounded-full bg-fuchsia-600/20 blur-[120px] [animation-delay:5s]" />
         <div className="animate-blob absolute top-96 left-1/2 size-[28rem] rounded-full bg-blue-600/20 blur-[120px] [animation-delay:9s]" />
+
+        {/* Features */}
+        <div className="animate-blob absolute top-[27%] -left-20 size-[30rem] rounded-full bg-violet-600/40 blur-[110px] [animation-delay:3s]" />
+
+        {/* Integrations */}
+        <div className="animate-blob absolute top-[44%] -right-20 size-[32rem] rounded-full bg-blue-600/40 blur-[110px] [animation-delay:7s]" />
+        <div className="animate-blob absolute top-[50%] left-16 size-[24rem] rounded-full bg-fuchsia-600/30 blur-[110px] [animation-delay:11s]" />
+
+        {/* CTA */}
+        <div className="animate-blob absolute top-[60%] left-1/3 size-[30rem] rounded-full bg-violet-600/35 blur-[110px] [animation-delay:2s]" />
       </div>
 
       {/* Nav */}
@@ -508,12 +521,164 @@ export default function Home() {
               Open-source AI, ready to plug in
             </h2>
             <p className="max-w-xl text-muted-foreground">
-              GitHub repos we&apos;re evaluating for future integrations.
-              Nothing here is wired up yet.
+              One integration is already live — the rest are GitHub repos
+              we&apos;re evaluating for what&apos;s next.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5, ease: EASE }}
+            >
+              <GlowCard accent="34, 197, 94" className="h-full">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 rounded-full bg-green-500/15 px-2 py-0.5 text-xs font-medium text-green-400">
+                    <span className="size-1.5 rounded-full bg-green-400" />
+                    Live now
+                  </span>
+                  <a
+                    href="https://github.com/sixfingerdev/sixfinger-api"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open sixfingerdev/sixfinger-api on GitHub"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <FolderGit2 className="size-4" />
+                  </a>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">
+                  SixFinger AI Gateway
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  25+ models behind one free, OpenAI-compatible API. Wired
+                  into MyAi&apos;s chat right now — try it live.
+                </p>
+                <Link
+                  href="/ai/sixfinger"
+                  className="mt-5 flex items-center gap-1 text-sm font-medium text-foreground/80"
+                >
+                  Try the live demo
+                  <ArrowUpRight className="size-3.5" />
+                </Link>
+              </GlowCard>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5, delay: 0.05, ease: EASE }}
+            >
+              <GlowCard accent="245, 158, 11" className="h-full">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-400">
+                    <span className="size-1.5 rounded-full bg-amber-400" />
+                    Live now
+                  </span>
+                  <a
+                    href="https://github.com/Free-AI-Things/g4f-working"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Free-AI-Things/g4f-working on GitHub"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <FolderGit2 className="size-4" />
+                  </a>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">
+                  Free Provider Catalog
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  113+ no-auth gpt4free providers, tested and republished
+                  daily. Browse what&apos;s working right now.
+                </p>
+                <Link
+                  href="/ai/g4f"
+                  className="mt-5 flex items-center gap-1 text-sm font-medium text-foreground/80"
+                >
+                  Browse the catalog
+                  <ArrowUpRight className="size-3.5" />
+                </Link>
+              </GlowCard>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
+            >
+              <GlowCard accent="236, 72, 153" className="h-full">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 rounded-full bg-pink-500/15 px-2 py-0.5 text-xs font-medium text-pink-400">
+                    <span className="size-1.5 rounded-full bg-pink-400" />
+                    Live now
+                  </span>
+                  <a
+                    href="https://github.com/lamwon/hermes-image-generation-skill"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open lamwon/hermes-image-generation-skill on GitHub"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <FolderGit2 className="size-4" />
+                  </a>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">Image Studio</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  DeepSeek engineers the prompt, free FLUX.1-schnell paints
+                  it. Describe an idea, get an image.
+                </p>
+                <Link
+                  href="/ai/hermes"
+                  className="mt-5 flex items-center gap-1 text-sm font-medium text-foreground/80"
+                >
+                  Try the live demo
+                  <ArrowUpRight className="size-3.5" />
+                </Link>
+              </GlowCard>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: EASE }}
+            >
+              <GlowCard accent="6, 182, 212" className="h-full">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 rounded-full bg-cyan-500/15 px-2 py-0.5 text-xs font-medium text-cyan-400">
+                    <span className="size-1.5 rounded-full bg-cyan-400" />
+                    Live now
+                  </span>
+                  <a
+                    href="https://github.com/Free-The-Ai/free-ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Free-The-Ai/free-ai on GitHub"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <FolderGit2 className="size-4" />
+                  </a>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">FreeTheAi Chat</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  60+ models behind one free, OpenAI-compatible API. Zero
+                  billing, ever.
+                </p>
+                <Link
+                  href="/ai/freetheai"
+                  className="mt-5 flex items-center gap-1 text-sm font-medium text-foreground/80"
+                >
+                  Try the live demo
+                  <ArrowUpRight className="size-3.5" />
+                </Link>
+              </GlowCard>
+            </motion.div>
+
             {upcomingIntegrations.map((repo, i) => (
               <motion.div
                 key={repo.name}

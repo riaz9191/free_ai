@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf /Users/riaz.a/Desktop/PEN/testai/.next *)"
+    ],
+    "additionalDirectories": [
+      "/Users/riaz.a/Desktop/PEN/testai/.next"
+    ]
+  }
+}
