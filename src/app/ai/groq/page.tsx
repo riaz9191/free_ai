@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -16,51 +16,45 @@ import {
   Check,
   SlidersHorizontal,
   ChevronDown,
+  Search,
+  Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloatingInfo } from "@/components/ai/floating-info";
 import { cn } from "@/lib/utils";
 
-const DOCS_URL = "https://build.nvidia.com/models";
-const STORAGE_KEY = "myai.nvidia.chat";
-const DEFAULT_MODEL = "meta/llama-3.1-8b-instruct";
+const DOCS_URL = "https://console.groq.com/docs";
+const STORAGE_KEY = "myai.groq.chat";
+const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 
 const FALLBACK_MODELS = [
-  { id: "meta/llama-3.1-8b-instruct" },
-  { id: "meta/llama-3.3-70b-instruct" },
-  { id: "deepseek-ai/deepseek-v4-flash" },
-  { id: "openai/gpt-oss-120b" },
-  { id: "mistralai/mistral-large-2-instruct" },
-  { id: "qwen/qwen3-next-80b-a3b-instruct" },
-  { id: "nvidia/llama-3.3-nemotron-super-49b-v1" },
+  { id: "llama-3.3-70b-versatile", group: "Meta" },
+  { id: "llama-3.1-8b-instant", group: "Meta" },
+  { id: "openai/gpt-oss-120b", group: "OpenAI" },
+  { id: "openai/gpt-oss-20b", group: "OpenAI" },
+  { id: "qwen/qwen3.6-27b", group: "Alibaba Cloud" },
 ];
 
 const EXCLUDE_PATTERNS = [
-  "embed",
+  "whisper",
   "guard",
-  "safety",
-  "reward",
-  "clip",
-  "detector",
-  "pii",
-  "translate",
-  "parse",
-  "calibration",
-  "vila",
-  "neva",
-  "kosmos",
-  "fuyu",
-  "deplot",
+  "orpheus",
+  "compound",
+  "tts",
+  "safeguard",
 ];
+
+const BEST_MODEL = "openai/gpt-oss-120b";
+const BEST_FAST_MODEL = "llama-3.1-8b-instant";
 
 const WELCOME: Message = {
   role: "assistant",
   content:
-    "Hi! I'm running on NVIDIA's NIM API — hundreds of models (Llama, DeepSeek, Mistral, Qwen, Nemotron, and more) through one OpenAI-compatible endpoint. Ask me anything, or open **Options** to switch models.",
+    "Hi! I'm running on Groq's LPU inference — Llama, GPT-OSS, and Qwen models responding at very high speed, all on Groq's free developer tier (rate-limited, no card required). Ask me anything, or open **Options** to switch models.",
 };
 
 type Message = { role: "user" | "assistant"; content: string };
-type ModelOption = { id: string; label: string; tag: string };
+type ModelOption = { id: string; label: string; tag: string; group: string };
 
 function loadStoredChat(): Message[] | null {
   if (typeof window === "undefined") return null;
@@ -72,6 +66,115 @@ function loadStoredChat(): Message[] | null {
   } catch {
     return null;
   }
+}
+
+function ModelPicker({
+  models,
+  value,
+  onChange,
+}: {
+  models: ModelOption[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const active = models.find((m) => m.id === value);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  const groups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = models.filter((m) => m.id.toLowerCase().includes(q));
+    const byGroup = new Map<string, ModelOption[]>();
+    for (const m of filtered) {
+      const list = byGroup.get(m.group) || [];
+      list.push(m);
+      byGroup.set(m.group, list);
+    }
+    return [...byGroup.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [models, query]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 text-left text-sm outline-none"
+      >
+        <span className="truncate">
+          {active?.label ?? value}
+          {active?.tag ? ` — ${active.tag}` : ""}
+          {value === BEST_MODEL ? " ★" : ""}
+        </span>
+        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+      </button>
+
+      {open && (
+        <div className="absolute top-full left-0 z-30 mt-1.5 w-[min(22rem,80vw)] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+          <div className="relative border-b border-border">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search models…"
+              className="w-full bg-transparent py-2.5 pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="max-h-72 overflow-y-auto p-1.5">
+            {groups.length === 0 && (
+              <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                No matches.
+              </p>
+            )}
+            {groups.map(([group, items]) => (
+              <div key={group} className="mb-1 last:mb-0">
+                <p className="px-2.5 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                  {group}
+                </p>
+                {items.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(m.id);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted/40",
+                      m.id === value && "bg-muted/60"
+                    )}
+                  >
+                    <span className="flex items-center gap-1.5 truncate">
+                      {(m.id === BEST_MODEL || m.id === BEST_FAST_MODEL) && (
+                        <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" />
+                      )}
+                      <span className="truncate">{m.label}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {m.tag}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -93,9 +196,9 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export default function NvidiaPage() {
+export default function GroqPage() {
   const [models, setModels] = useState<ModelOption[]>(
-    FALLBACK_MODELS.map((m) => ({ id: m.id, label: m.id, tag: "" }))
+    FALLBACK_MODELS.map((m) => ({ id: m.id, label: m.id, tag: "Free", group: m.group }))
   );
   const [model, setModel] = useState(DEFAULT_MODEL);
   const [temperature, setTemperature] = useState(1);
@@ -118,12 +221,20 @@ export default function NvidiaPage() {
   }, [messages]);
 
   useEffect(() => {
-    fetch("/api/ai/nvidia/models")
+    fetch("/api/ai/groq/models")
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) return;
         const items: ModelOption[] = (data.data || [])
-          .map((m: { id: string }) => ({ id: m.id, label: m.id, tag: "" }))
+          .filter((m: { output_modalities?: string[] }) =>
+            !m.output_modalities || m.output_modalities.includes("text")
+          )
+          .map((m: { id: string; owned_by?: string }) => ({
+            id: m.id,
+            label: m.id,
+            tag: "Free",
+            group: m.owned_by || "Other",
+          }))
           .filter(
             (m: ModelOption) =>
               !EXCLUDE_PATTERNS.some((p) => m.id.toLowerCase().includes(p))
@@ -150,7 +261,7 @@ export default function NvidiaPage() {
     abortRef.current = controller;
 
     try {
-      const res = await fetch("/api/ai/nvidia/chat", {
+      const res = await fetch("/api/ai/groq/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -239,10 +350,10 @@ export default function NvidiaPage() {
             Back to AI Tools
           </Link>
           <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-green-500 to-emerald-600">
+            <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-orange-600 to-amber-500">
               <Sparkles className="size-3.5 text-white" />
             </span>
-            NVIDIA NIM Chat
+            Groq Chat
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -276,20 +387,7 @@ export default function NvidiaPage() {
                 <span className="text-xs font-medium text-muted-foreground">
                   Model
                 </span>
-                <div className="relative">
-                  <select
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    className="w-full appearance-none rounded-lg border border-border bg-muted/20 px-3 py-2 pr-8 text-sm outline-none"
-                  >
-                    {models.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute top-1/2 right-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
-                </div>
+                <ModelPicker models={models} value={model} onChange={setModel} />
               </label>
 
               <label className="flex w-full flex-col gap-1.5 sm:w-48">
@@ -303,7 +401,7 @@ export default function NvidiaPage() {
                   step={0.1}
                   value={temperature}
                   onChange={(e) => setTemperature(Number(e.target.value))}
-                  className="accent-green-500"
+                  className="accent-orange-500"
                 />
               </label>
 
@@ -320,10 +418,20 @@ export default function NvidiaPage() {
               </label>
             </div>
             <p className="mx-auto mt-3 max-w-4xl text-xs text-muted-foreground">
-              The model list is fetched live from NVIDIA&apos;s public catalog
-              — non-chat models (embeddings, guardrails, vision utilities) are
-              filtered out. Some models may need extra access approval on
-              your NVIDIA account.
+              The model list is fetched live from your Groq account&apos;s
+              catalog — audio, guardrail, and agentic-compound models are
+              filtered out since this page is text chat only. Every model
+              here runs on Groq&apos;s free developer tier (rate-limited, no
+              card needed) — there&apos;s no separate paid tier for personal
+              use.{" "}
+              <strong className="font-medium text-foreground">
+                openai/gpt-oss-120b
+              </strong>{" "}
+              is the strongest overall model,{" "}
+              <strong className="font-medium text-foreground">
+                llama-3.1-8b-instant
+              </strong>{" "}
+              is the fastest for quick replies.
             </p>
           </div>
         )}
@@ -341,13 +449,13 @@ export default function NvidiaPage() {
               className={cn(
                 "group max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                 m.role === "user"
-                  ? "ml-auto rounded-tr-sm bg-gradient-to-br from-green-500 to-emerald-600 text-white"
+                  ? "ml-auto rounded-tr-sm bg-gradient-to-br from-orange-600 to-amber-500 text-white"
                   : "rounded-tl-sm bg-muted/40 text-foreground"
               )}
             >
               {m.content ? (
                 m.role === "assistant" ? (
-                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-pre:rounded-lg prose-pre:bg-black/40 prose-code:text-green-300">
+                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-pre:rounded-lg prose-pre:bg-black/40 prose-code:text-orange-300">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                   </div>
                 ) : (
@@ -386,7 +494,7 @@ export default function NvidiaPage() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Ask ${activeModel?.label ?? "NVIDIA NIM"} anything…`}
+            placeholder={`Ask ${activeModel?.label ?? "Groq"} anything…`}
             disabled={isStreaming}
             className="flex-1 rounded-full border border-border bg-muted/20 px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-foreground/20"
           />
@@ -412,29 +520,28 @@ export default function NvidiaPage() {
             </Button>
           )}
         </form>
-
       </main>
 
-      <FloatingInfo accentClassName="text-green-400">
+      <FloatingInfo accentClassName="text-orange-400">
         <div className="flex flex-col gap-3">
           <p className="font-medium text-foreground">Run this yourself</p>
           <ol className="flex flex-col gap-2.5">
             <li>
               1. Sign up free at{" "}
-              <a href="https://build.nvidia.com" target="_blank" rel="noopener noreferrer">
-                build.nvidia.com
+              <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">
+                console.groq.com
               </a>{" "}
-              and generate a key from any model page.
+              and generate an API key.
             </li>
             <li>
               2. <KeyRound className="mr-1 inline size-3.5" />
               Add it to <code>.env.local</code>:
-              <pre>NVIDIA_API_KEY=nvapi-xxx</pre>
+              <pre>GROQ_API_KEY=gsk_xxx</pre>
             </li>
             <li>
-              3. Restart <code>npm run dev</code>, then chat. Free tier
-              includes generous rate-limited credits across hundreds of
-              models.
+              3. Restart <code>npm run dev</code>, then chat. Groq&apos;s free
+              dev tier is rate-limited (requests/day + tokens/minute) but
+              there&apos;s no card or paid tier needed for personal use.
             </li>
           </ol>
           <a
@@ -444,7 +551,7 @@ export default function NvidiaPage() {
             className="mt-1 flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs font-medium"
           >
             <Sparkles className="size-3.5" />
-            build.nvidia.com/models
+            console.groq.com/docs
             <ArrowUpRight className="size-3" />
           </a>
         </div>

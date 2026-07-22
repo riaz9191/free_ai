@@ -75,7 +75,7 @@ function CopyButton({ text }: { text: string }) {
 export default function GitHubModelsPage() {
   const [models, setModels] = useState<ModelOption[]>(FALLBACK_MODELS);
   const [model, setModel] = useState(DEFAULT_MODEL);
-  const [temperature, setTemperature] = useState(0.7);
+  const [temperature, setTemperature] = useState(1);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);

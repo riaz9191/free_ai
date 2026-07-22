@@ -101,7 +101,7 @@ export default function MistralPage() {
     FALLBACK_MODELS.map((m) => ({ id: m.id, label: m.id, tag: tagForModel(m.id) }))
   );
   const [model, setModel] = useState(DEFAULT_MODEL);
-  const [temperature, setTemperature] = useState(0.7);
+  const [temperature, setTemperature] = useState(1);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);

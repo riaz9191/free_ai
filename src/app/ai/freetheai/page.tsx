@@ -114,7 +114,7 @@ function ChatTab({
 }) {
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
-  const [temperature, setTemperature] = useState(0.7);
+  const [temperature, setTemperature] = useState(1);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);

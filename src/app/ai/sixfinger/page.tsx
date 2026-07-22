@@ -75,7 +75,7 @@ function CopyButton({ text }: { text: string }) {
 
 export default function AiPage() {
   const [model, setModel] = useState(MODELS[0].id);
-  const [temperature, setTemperature] = useState(0.7);
+  const [temperature, setTemperature] = useState(1);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);

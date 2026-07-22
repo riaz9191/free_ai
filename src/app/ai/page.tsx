@@ -96,6 +96,15 @@ const integrations = [
     accent: "237, 106, 60",
     status: "live" as const,
   },
+  {
+    name: "Groq Chat",
+    description:
+      "Llama, GPT-OSS, and Qwen at very high inference speed — Groq's free developer tier, no card required.",
+    icon: MessageSquare,
+    href: "/ai/groq",
+    accent: "249, 115, 22",
+    status: "live" as const,
+  },
 ];
 
 export default function AiHubPage() {

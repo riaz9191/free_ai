@@ -101,7 +101,7 @@ function ChatTab() {
     FALLBACK_MODELS.map((m) => ({ id: m.id, label: m.id, tag: m.tag }))
   );
   const [model, setModel] = useState(DEFAULT_CHAT_MODEL);
-  const [temperature, setTemperature] = useState(0.7);
+  const [temperature, setTemperature] = useState(1);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
