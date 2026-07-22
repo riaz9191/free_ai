@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Sparkles,
-  Terminal,
   KeyRound,
   FolderGit2,
   Loader2,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { FloatingInfo } from "@/components/ai/floating-info";
 
 const REPO_URL = "https://github.com/lamwon/hermes-image-generation-skill";
 
@@ -62,8 +62,8 @@ export default function HermesImagePage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
           <Link
             href="/ai"
@@ -82,7 +82,7 @@ export default function HermesImagePage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col gap-6 overflow-y-auto px-6 py-8">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Describe it, DeepSeek writes the prompt, Flux paints it
@@ -184,86 +184,46 @@ export default function HermesImagePage() {
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="mt-4 flex flex-col gap-6 rounded-2xl border border-border bg-muted/10 p-6">
-          <div className="flex items-center gap-2">
-            <Terminal className="size-4 text-pink-400" />
-            <h2 className="text-sm font-semibold">
-              Run this yourself — setup instructions
-            </h2>
-          </div>
-          <ol className="flex flex-col gap-3 text-sm text-muted-foreground">
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                1
-              </span>
-              Get a DeepSeek API key from{" "}
-              <a
-                href="https://platform.deepseek.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2"
-              >
+      </main>
+
+      <FloatingInfo accentClassName="text-pink-400">
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-foreground">Run this yourself</p>
+          <ol className="flex flex-col gap-2.5">
+            <li>
+              1. Get a DeepSeek API key from{" "}
+              <a href="https://platform.deepseek.com" target="_blank" rel="noopener noreferrer">
                 platform.deepseek.com
-                <ArrowUpRight className="size-3" />
               </a>
               .
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                2
-              </span>
-              Sign up free at{" "}
-              <a
-                href="https://siliconflow.cn"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2"
-              >
+            <li>
+              2. Sign up free at{" "}
+              <a href="https://siliconflow.cn" target="_blank" rel="noopener noreferrer">
                 siliconflow.cn
-                <ArrowUpRight className="size-3" />
               </a>{" "}
               for a free Flux.1-schnell credit, then grab your key.
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                3
-              </span>
-              <span className="flex flex-wrap items-center gap-1.5">
-                <KeyRound className="size-3.5" />
-                Add both to{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  .env.local
-                </code>
-                :
-              </span>
-              <pre className="mt-1 w-full overflow-x-auto rounded-lg bg-muted/40 p-3 font-mono text-xs text-foreground">
-                {"DEEPSEEK_API_KEY=sk-...\nSILICONFLOW_API_KEY=sk-..."}
-              </pre>
+            <li>
+              3. <KeyRound className="mr-1 inline size-3.5" />Add both to <code>.env.local</code>:
+              <pre>{"DEEPSEEK_API_KEY=sk-...\nSILICONFLOW_API_KEY=sk-..."}</pre>
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                4
-              </span>
-              Restart the dev server (
-              <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                npm run dev
-              </code>
-              ) so the new env vars load, then generate above.
+            <li>
+              4. Restart <code>npm run dev</code> so the new env vars load, then generate above.
             </li>
           </ol>
           <a
             href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/40"
+            className="mt-1 flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs font-medium"
           >
-            <FolderGit2 className="size-4" />
+            <FolderGit2 className="size-3.5" />
             lamwon/hermes-image-generation-skill
-            <ArrowUpRight className="size-3.5" />
+            <ArrowUpRight className="size-3" />
           </a>
         </div>
-      </main>
+      </FloatingInfo>
     </div>
   );
 }

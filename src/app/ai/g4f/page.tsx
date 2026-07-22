@@ -59,8 +59,8 @@ export default function G4fCatalogPage() {
   }, [entries, query, type]);
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
           <Link
             href="/ai"
@@ -79,7 +79,7 @@ export default function G4fCatalogPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col gap-6 overflow-y-auto px-6 py-8">
         <div className="flex flex-col gap-3">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             No-auth AI providers, tested daily

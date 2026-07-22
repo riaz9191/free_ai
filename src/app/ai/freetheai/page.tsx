@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   Send,
   Sparkles,
-  Terminal,
   KeyRound,
   FolderGit2,
   Square,
@@ -31,6 +30,7 @@ import {
   Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FloatingInfo } from "@/components/ai/floating-info";
 import { cn } from "@/lib/utils";
 
 const REPO_URL = "https://github.com/Free-The-Ai/free-ai";
@@ -213,7 +213,7 @@ function ChatTab({
   const activeModel = models.find((m) => m.id === model);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-4">
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -292,8 +292,9 @@ function ChatTab({
 
       <div
         ref={scrollRef}
-        className="flex max-h-[50vh] min-h-[35vh] flex-col gap-3 overflow-y-auto rounded-2xl border border-border bg-muted/10 p-5"
+        className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-border bg-muted/10 p-5"
       >
+        <div className="flex flex-col gap-3">
         {messages.map((m, i) => (
           <div
             key={i}
@@ -326,6 +327,7 @@ function ChatTab({
             )}
           </div>
         ))}
+        </div>
       </div>
 
       {error && <ErrorBanner error={error} />}
@@ -335,7 +337,7 @@ function ChatTab({
           e.preventDefault();
           sendMessage();
         }}
-        className="flex items-center gap-2"
+        className="flex shrink-0 items-center gap-2"
       >
         <input
           value={input}
@@ -774,8 +776,8 @@ export default function FreeTheAiPage() {
   }, []);
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
           <Link
             href="/ai"
@@ -811,125 +813,61 @@ export default function FreeTheAiPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 px-6 py-8">
-        {tab === "chat" && (
+      <main className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-6 py-4">
+        {tab === "chat" ? (
           <ChatTab models={models} model={model} setModel={setModel} />
-        )}
-        {tab === "image" && <ImageTab />}
-        {tab === "edit" && <EditTab />}
-        {tab === "speech" && <SpeechTab />}
-        {tab === "transcribe" && <TranscribeTab />}
-
-        {/* Instructions */}
-        <div className="mt-8 flex flex-col gap-6 rounded-2xl border border-border bg-muted/10 p-6">
-          <div className="flex items-center gap-2">
-            <Terminal className="size-4 text-cyan-400" />
-            <h2 className="text-sm font-semibold">
-              Run this yourself — setup instructions
-            </h2>
+        ) : (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {tab === "image" && <ImageTab />}
+            {tab === "edit" && <EditTab />}
+            {tab === "speech" && <SpeechTab />}
+            {tab === "transcribe" && <TranscribeTab />}
           </div>
-          <ol className="flex flex-col gap-3 text-sm text-muted-foreground">
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                1
-              </span>
-              <span className="flex flex-wrap items-center gap-1.5">
-                <MessageCircle className="size-3.5" />
-                Join{" "}
-                <a
-                  href="https://discord.gg/secrets"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2"
-                >
-                  discord.gg/secrets
-                  <ArrowUpRight className="size-3" />
-                </a>{" "}
-                and run{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  /signup
-                </code>{" "}
-                to get a free API key.
-              </span>
+        )}
+      </main>
+
+      <FloatingInfo accentClassName="text-cyan-400">
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-foreground">Run this yourself</p>
+          <ol className="flex flex-col gap-2.5">
+            <li>
+              1. <MessageCircle className="mr-1 inline size-3.5" />
+              Join{" "}
+              <a href="https://discord.gg/secrets" target="_blank" rel="noopener noreferrer">
+                discord.gg/secrets
+              </a>{" "}
+              and run <code>/signup</code> for a free key.
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                2
-              </span>
-              <span className="flex flex-wrap items-center gap-1.5">
-                <CalendarClock className="size-3.5" />
-                Run{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  /checkin
-                </code>{" "}
-                in Discord{" "}
-                <strong className="font-medium text-foreground">
-                  once every UTC day
-                </strong>{" "}
-                — new and existing keys stop working without it.
-              </span>
+            <li>
+              2. <CalendarClock className="mr-1 inline size-3.5" />
+              Run <code>/checkin</code> in Discord{" "}
+              <strong>once every UTC day</strong> — keys stop working
+              without it.
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                3
-              </span>
-              <span className="flex flex-wrap items-center gap-1.5">
-                <KeyRound className="size-3.5" />
-                Add your key to{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  .env.local
-                </code>
-                :
-              </span>
-              <pre className="mt-1 w-full overflow-x-auto rounded-lg bg-muted/40 p-3 font-mono text-xs text-foreground">
-                FREETHEAI_API_KEY=xxx
-              </pre>
+            <li>
+              3. <KeyRound className="mr-1 inline size-3.5" />
+              Add your key to <code>.env.local</code>:
+              <pre>FREETHEAI_API_KEY=xxx</pre>
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                4
-              </span>
-              <span>
-                Restart the dev server (
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  npm run dev
-                </code>
-                ), then switch between{" "}
-                <strong className="font-medium text-foreground">
-                  Chat, Image, Edit Image, Speech,
-                </strong>{" "}
-                and{" "}
-                <strong className="font-medium text-foreground">
-                  Transcribe
-                </strong>{" "}
-                above. Some models are gated behind the Discord{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  seems_legit
-                </code>{" "}
-                role — if a request fails with{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  unknown aliased model
-                </code>{" "}
-                or{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  model_access_denied
-                </code>
-                , check the live catalog for what&apos;s currently exposed.
-              </span>
+            <li>
+              4. Restart <code>npm run dev</code>, then switch tabs above.
+              Some models need the Discord <code>seems_legit</code> role —
+              if you see <code>unknown aliased model</code> or{" "}
+              <code>model_access_denied</code>, check the live catalog.
             </li>
           </ol>
           <a
             href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/40"
+            className="mt-1 flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs font-medium"
           >
-            <FolderGit2 className="size-4" />
+            <FolderGit2 className="size-3.5" />
             Free-The-Ai/free-ai
-            <ArrowUpRight className="size-3.5" />
+            <ArrowUpRight className="size-3" />
           </a>
         </div>
-      </main>
+      </FloatingInfo>
     </div>
   );
 }
