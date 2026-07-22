@@ -9,6 +9,8 @@ import {
   MessageSquare,
   ImageIcon,
   Compass,
+  Zap,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -121,6 +123,24 @@ const integrations = [
     icon: MessageSquare,
     href: "/ai/cloudflare",
     accent: "249, 115, 22",
+    status: "live" as const,
+  },
+  {
+    name: "Morph Chat",
+    description:
+      "GLM-5.2, DeepSeek V4 Flash, MiniMax, and Qwen at up to 200 tok/s. Auto mode routes to the cheapest model per prompt; every message is Reflex-screened.",
+    icon: Zap,
+    href: "/ai/morph",
+    accent: "20, 184, 166",
+    status: "live" as const,
+  },
+  {
+    name: "WarpGrep Code Search",
+    description:
+      "Search any public GitHub repo in plain English — no embeddings, no indexing, no cloning.",
+    icon: Search,
+    href: "/ai/warpgrep",
+    accent: "139, 92, 246",
     status: "live" as const,
   },
 ];
