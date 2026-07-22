@@ -360,6 +360,9 @@ export default function Home() {
             <a href="#get-started" className="transition-colors hover:text-foreground">
               Get started
             </a>
+            <Link href="/ai" className="transition-colors hover:text-foreground">
+              AI Tools
+            </Link>
           </nav>
           <div className="flex items-center gap-1">
             <ThemeToggle />
