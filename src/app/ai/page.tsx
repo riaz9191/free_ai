@@ -105,6 +105,15 @@ const integrations = [
     accent: "249, 115, 22",
     status: "live" as const,
   },
+  {
+    name: "Cohere Chat",
+    description:
+      "Command A/R and Aya models, with image-input (vision) support on select models. Free trial key, rate-limited.",
+    icon: MessageSquare,
+    href: "/ai/cohere",
+    accent: "217, 70, 239",
+    status: "live" as const,
+  },
 ];
 
 export default function AiHubPage() {
