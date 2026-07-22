@@ -790,6 +790,43 @@ export default function Home() {
               </GlowCard>
             </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5, delay: 0.35, ease: EASE }}
+            >
+              <GlowCard accent="163, 163, 163" className="h-full">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 rounded-full bg-neutral-500/15 px-2 py-0.5 text-xs font-medium text-neutral-400">
+                    <span className="size-1.5 rounded-full bg-neutral-400" />
+                    Live now
+                  </span>
+                  <a
+                    href="https://docs.github.com/en/github-models"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open GitHub Models docs"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <ArrowUpRight className="size-4" />
+                  </a>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">GitHub Models</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  GPT, DeepSeek, Llama, Mistral, Phi — free with rate limits,
+                  tied to your GitHub account.
+                </p>
+                <Link
+                  href="/ai/github-models"
+                  className="mt-5 flex items-center gap-1 text-sm font-medium text-foreground/80"
+                >
+                  Try the live demo
+                  <ArrowUpRight className="size-3.5" />
+                </Link>
+              </GlowCard>
+            </motion.div>
+
             {upcomingIntegrations.map((repo, i) => (
               <motion.div
                 key={repo.name}

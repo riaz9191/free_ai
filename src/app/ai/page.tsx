@@ -78,6 +78,15 @@ const integrations = [
     accent: "99, 102, 241",
     status: "live" as const,
   },
+  {
+    name: "GitHub Models",
+    description:
+      "GPT, DeepSeek, Llama, Mistral, and Phi — free with rate limits, tied to your GitHub account.",
+    icon: MessageSquare,
+    href: "/ai/github-models",
+    accent: "163, 163, 163",
+    status: "live" as const,
+  },
 ];
 
 export default function AiHubPage() {
