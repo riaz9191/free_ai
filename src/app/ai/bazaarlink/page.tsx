@@ -28,9 +28,9 @@ const DEFAULT_MODEL = "deepseek/deepseek-v4-flash:free";
 
 const FALLBACK_MODELS = [
   { id: "deepseek/deepseek-v4-flash:free", label: "Deepseek V4 Flash (free)", tag: "Free" },
-  { id: "openai/gpt-4.1", label: "GPT-4.1", tag: "" },
-  { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", tag: "" },
-  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", tag: "" },
+  { id: "openai/gpt-4.1", label: "GPT-4.1", tag: "Paid" },
+  { id: "anthropic/claude-sonnet-4.6", label: "Claude Sonnet 4.6", tag: "Paid" },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", tag: "Paid" },
 ];
 
 const WELCOME: Message = {
@@ -115,11 +115,11 @@ export default function BazaarLinkPage() {
               const free =
                 String(m.pricing?.prompt) === "0" &&
                 String(m.pricing?.completion) === "0";
-              return { id: m.id, label: m.name || m.id, tag: free ? "Free" : "" };
+              return { id: m.id, label: m.name || m.id, tag: free ? "Free" : "Paid" };
             }
           )
           .sort((a: ModelOption, b: ModelOption) =>
-            a.tag === b.tag ? 0 : a.tag ? -1 : 1
+            a.tag === b.tag ? 0 : a.tag === "Free" ? -1 : 1
           );
         if (textModels.length) setModels(textModels);
       })

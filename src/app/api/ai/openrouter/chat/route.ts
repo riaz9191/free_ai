@@ -7,6 +7,26 @@ const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
+function friendlyOpenRouterError(status: number, rawBody: string): string {
+  let upstreamMessage = "";
+  try {
+    upstreamMessage = JSON.parse(rawBody)?.error?.message || "";
+  } catch {
+    // rawBody wasn't JSON — fall through to generic message
+  }
+
+  if (status === 402 || /requires more credits/i.test(upstreamMessage)) {
+    return "This model needs more credits than your OpenRouter account has for this response. Pick a model tagged “Free” in Options, or add credits at openrouter.ai/settings/credits.";
+  }
+  if (status === 401) {
+    return "OpenRouter rejected the API key. Check OPENROUTER_API_KEY in .env.local.";
+  }
+  if (status === 429) {
+    return "Rate limited by OpenRouter — wait a moment and try again.";
+  }
+  return upstreamMessage || `OpenRouter API error (${status})`;
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
@@ -66,7 +86,7 @@ export async function POST(req: NextRequest) {
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => "");
     return Response.json(
-      { error: `OpenRouter API error (${upstream.status})`, detail: text.slice(0, 500) },
+      { error: friendlyOpenRouterError(upstream.status, text), detail: text.slice(0, 500) },
       { status: upstream.status || 502 }
     );
   }

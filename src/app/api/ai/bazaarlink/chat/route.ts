@@ -7,6 +7,26 @@ const DEFAULT_MODEL = "deepseek/deepseek-v4-flash:free";
 
 type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
 
+function friendlyBazaarLinkError(status: number, rawBody: string): string {
+  let upstreamMessage = "";
+  try {
+    upstreamMessage = JSON.parse(rawBody)?.error?.message || "";
+  } catch {
+    // rawBody wasn't JSON — fall through to generic message
+  }
+
+  if (status === 402 || /credit|billing|insufficient/i.test(upstreamMessage)) {
+    return "This model needs more credits than your BazaarLink account has. Pick a model tagged “Free” in Options, or add credits at bazaarlink.ai/pricing.";
+  }
+  if (status === 401) {
+    return "BazaarLink rejected the API key. Check BAZAARLINK_API_KEY in .env.local.";
+  }
+  if (status === 429) {
+    return "Rate limited by BazaarLink — wait a moment and try again.";
+  }
+  return upstreamMessage || `BazaarLink API error (${status})`;
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.BAZAARLINK_API_KEY;
 
@@ -64,7 +84,7 @@ export async function POST(req: NextRequest) {
   if (!upstream.ok || !upstream.body) {
     const text = await upstream.text().catch(() => "");
     return Response.json(
-      { error: `BazaarLink API error (${upstream.status})`, detail: text.slice(0, 500) },
+      { error: friendlyBazaarLinkError(upstream.status, text), detail: text.slice(0, 500) },
       { status: upstream.status || 502 }
     );
   }

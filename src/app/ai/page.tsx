@@ -69,6 +69,15 @@ const integrations = [
     accent: "118, 185, 0",
     status: "live" as const,
   },
+  {
+    name: "OpenRouter Chat",
+    description:
+      "Every major model, one API. Live catalog with free-tier models sorted first.",
+    icon: MessageSquare,
+    href: "/ai/openrouter",
+    accent: "99, 102, 241",
+    status: "live" as const,
+  },
 ];
 
 export default function AiHubPage() {

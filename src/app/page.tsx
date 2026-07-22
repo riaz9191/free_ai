@@ -753,6 +753,43 @@ export default function Home() {
               </GlowCard>
             </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.5, delay: 0.3, ease: EASE }}
+            >
+              <GlowCard accent="99, 102, 241" className="h-full">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 rounded-full bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-400">
+                    <span className="size-1.5 rounded-full bg-indigo-400" />
+                    Live now
+                  </span>
+                  <a
+                    href="https://openrouter.ai/docs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open OpenRouter docs"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <ArrowUpRight className="size-4" />
+                  </a>
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">OpenRouter Chat</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Every major model, one API. Free-tier models sorted first
+                  in the live catalog.
+                </p>
+                <Link
+                  href="/ai/openrouter"
+                  className="mt-5 flex items-center gap-1 text-sm font-medium text-foreground/80"
+                >
+                  Try the live demo
+                  <ArrowUpRight className="size-3.5" />
+                </Link>
+              </GlowCard>
+            </motion.div>
+
             {upcomingIntegrations.map((repo, i) => (
               <motion.div
                 key={repo.name}
