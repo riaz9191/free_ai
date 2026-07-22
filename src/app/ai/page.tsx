@@ -87,6 +87,15 @@ const integrations = [
     accent: "163, 163, 163",
     status: "live" as const,
   },
+  {
+    name: "Mistral Chat",
+    description:
+      "Mistral Small/Large, Codestral, Pixtral, and Ministral — one API key, live model catalog.",
+    icon: MessageSquare,
+    href: "/ai/mistral",
+    accent: "237, 106, 60",
+    status: "live" as const,
+  },
 ];
 
 export default function AiHubPage() {
