@@ -60,6 +60,15 @@ const integrations = [
     accent: "249, 115, 22",
     status: "live" as const,
   },
+  {
+    name: "NVIDIA NIM Chat",
+    description:
+      "Llama, DeepSeek, Mistral, Qwen, and Nemotron models via NVIDIA's free API catalog.",
+    icon: MessageSquare,
+    href: "/ai/nvidia",
+    accent: "118, 185, 0",
+    status: "live" as const,
+  },
 ];
 
 export default function AiHubPage() {
