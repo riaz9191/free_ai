@@ -16,7 +16,89 @@ import { cn } from "@/lib/utils";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+// Lower rank = shown first. Ranked by (1) model quality available for free,
+// (2) how generous the free rate limit is. Tools without a `rank` (catalog/
+// image/search utilities, not general chat models) sort to the end.
 const integrations = [
+  {
+    name: "Groq Chat",
+    description:
+      "Llama, GPT-OSS, and Qwen at very high inference speed — Groq's free developer tier, no card required.",
+    icon: MessageSquare,
+    href: "/ai/groq",
+    accent: "249, 115, 22",
+    status: "live" as const,
+    badge: "★ Best free + limits",
+    limit: "Free · 1,000 req/day, 12k tok/min",
+    rank: 1,
+  },
+  {
+    name: "OpenRouter Chat",
+    description:
+      "Every major model, one API. Live catalog with free-tier models sorted first.",
+    icon: MessageSquare,
+    href: "/ai/openrouter",
+    accent: "99, 102, 241",
+    status: "live" as const,
+    badge: "★ Best free models",
+    limit: "Free `:free` models · ~20 req/min",
+    rank: 2,
+  },
+  {
+    name: "Cloudflare Workers AI",
+    description:
+      "Llama, GPT-OSS, and Mistral chat plus Flux/SDXL image generation on Cloudflare's edge — free daily allowance.",
+    icon: MessageSquare,
+    href: "/ai/cloudflare",
+    accent: "249, 115, 22",
+    status: "live" as const,
+    limit: "Free · 10,000 neurons/day (chat + image)",
+    rank: 3,
+  },
+  {
+    name: "Mistral Chat",
+    description:
+      "Mistral Small/Large, Codestral, Pixtral, and Ministral — one API key, live model catalog.",
+    icon: MessageSquare,
+    href: "/ai/mistral",
+    accent: "237, 106, 60",
+    status: "live" as const,
+    limit: "Free tier · 50 req/min, 50k tok/min",
+    rank: 4,
+  },
+  {
+    name: "NVIDIA NIM Chat",
+    description:
+      "Llama, DeepSeek, Mistral, Qwen, and Nemotron models via NVIDIA's free API catalog.",
+    icon: MessageSquare,
+    href: "/ai/nvidia",
+    accent: "118, 185, 0",
+    status: "live" as const,
+    limit: "Free · generous rate-limited credits",
+    rank: 5,
+  },
+  {
+    name: "GitHub Models",
+    description:
+      "GPT, DeepSeek, Llama, Mistral, and Phi — free with rate limits, tied to your GitHub account.",
+    icon: MessageSquare,
+    href: "/ai/github-models",
+    accent: "163, 163, 163",
+    status: "live" as const,
+    limit: "Free · tied to GitHub account limits",
+    rank: 6,
+  },
+  {
+    name: "Cohere Chat",
+    description:
+      "Command A/R and Aya models, with image-input (vision) support on select models. Free trial key, rate-limited.",
+    icon: MessageSquare,
+    href: "/ai/cohere",
+    accent: "217, 70, 239",
+    status: "live" as const,
+    limit: "Trial key · ~20 req/min, ~1,000/mo",
+    rank: 7,
+  },
   {
     name: "SixFinger AI Chat",
     description:
@@ -25,15 +107,8 @@ const integrations = [
     href: "/ai/sixfinger",
     accent: "34, 197, 94",
     status: "live" as const,
-  },
-  {
-    name: "Free Provider Catalog",
-    description:
-      "Daily-updated directory of no-auth gpt4free providers and models — 113+ working right now. Catalog only, not wired to chat.",
-    icon: Compass,
-    href: "/ai/g4f",
-    accent: "245, 158, 11",
-    status: "live" as const,
+    limit: "Free · community gateway",
+    rank: 8,
   },
   {
     name: "FreeTheAi Chat",
@@ -43,6 +118,31 @@ const integrations = [
     href: "/ai/freetheai",
     accent: "6, 182, 212",
     status: "live" as const,
+    limit: "Free · daily check-in required",
+    rank: 9,
+  },
+  {
+    name: "BazaarLink Chat",
+    description:
+      "Hundreds of models through one OpenAI-compatible gateway. DeepSeek V4 Flash runs free.",
+    icon: MessageSquare,
+    href: "/ai/bazaarlink",
+    accent: "249, 115, 22",
+    status: "live" as const,
+    limit: "Only DeepSeek V4 Flash is free",
+    rank: 10,
+  },
+  {
+    name: "Morph Chat",
+    description:
+      "GLM-5.2, DeepSeek V4 Flash, MiniMax, and Qwen at up to 200 tok/s. Auto mode routes to the cheapest model per prompt; every message is Reflex-screened.",
+    icon: Zap,
+    href: "/ai/morph",
+    accent: "20, 184, 166",
+    status: "live" as const,
+    badge: "No free tier",
+    limit: "Pay-per-token · no $0 tier",
+    rank: 11,
   },
   {
     name: "Image Studio",
@@ -54,93 +154,21 @@ const integrations = [
     status: "live" as const,
   },
   {
-    name: "BazaarLink Chat",
-    description:
-      "Hundreds of models through one OpenAI-compatible gateway. DeepSeek V4 Flash runs free.",
-    icon: MessageSquare,
-    href: "/ai/bazaarlink",
-    accent: "249, 115, 22",
-    status: "live" as const,
-  },
-  {
-    name: "NVIDIA NIM Chat",
-    description:
-      "Llama, DeepSeek, Mistral, Qwen, and Nemotron models via NVIDIA's free API catalog.",
-    icon: MessageSquare,
-    href: "/ai/nvidia",
-    accent: "118, 185, 0",
-    status: "live" as const,
-  },
-  {
-    name: "OpenRouter Chat",
-    description:
-      "Every major model, one API. Live catalog with free-tier models sorted first.",
-    icon: MessageSquare,
-    href: "/ai/openrouter",
-    accent: "99, 102, 241",
-    status: "live" as const,
-  },
-  {
-    name: "GitHub Models",
-    description:
-      "GPT, DeepSeek, Llama, Mistral, and Phi — free with rate limits, tied to your GitHub account.",
-    icon: MessageSquare,
-    href: "/ai/github-models",
-    accent: "163, 163, 163",
-    status: "live" as const,
-  },
-  {
-    name: "Mistral Chat",
-    description:
-      "Mistral Small/Large, Codestral, Pixtral, and Ministral — one API key, live model catalog.",
-    icon: MessageSquare,
-    href: "/ai/mistral",
-    accent: "237, 106, 60",
-    status: "live" as const,
-  },
-  {
-    name: "Groq Chat",
-    description:
-      "Llama, GPT-OSS, and Qwen at very high inference speed — Groq's free developer tier, no card required.",
-    icon: MessageSquare,
-    href: "/ai/groq",
-    accent: "249, 115, 22",
-    status: "live" as const,
-  },
-  {
-    name: "Cohere Chat",
-    description:
-      "Command A/R and Aya models, with image-input (vision) support on select models. Free trial key, rate-limited.",
-    icon: MessageSquare,
-    href: "/ai/cohere",
-    accent: "217, 70, 239",
-    status: "live" as const,
-  },
-  {
-    name: "Cloudflare Workers AI",
-    description:
-      "Llama, GPT-OSS, and Mistral chat plus Flux/SDXL image generation on Cloudflare's edge — free daily allowance.",
-    icon: MessageSquare,
-    href: "/ai/cloudflare",
-    accent: "249, 115, 22",
-    status: "live" as const,
-  },
-  {
-    name: "Morph Chat",
-    description:
-      "GLM-5.2, DeepSeek V4 Flash, MiniMax, and Qwen at up to 200 tok/s. Auto mode routes to the cheapest model per prompt; every message is Reflex-screened.",
-    icon: Zap,
-    href: "/ai/morph",
-    accent: "20, 184, 166",
-    status: "live" as const,
-  },
-  {
     name: "WarpGrep Code Search",
     description:
       "Search any public GitHub repo in plain English — no embeddings, no indexing, no cloning.",
     icon: Search,
     href: "/ai/warpgrep",
     accent: "139, 92, 246",
+    status: "live" as const,
+  },
+  {
+    name: "Free Provider Catalog",
+    description:
+      "Daily-updated directory of no-auth gpt4free providers and models — 113+ working right now. Catalog only, not wired to chat.",
+    icon: Compass,
+    href: "/ai/g4f",
+    accent: "245, 158, 11",
     status: "live" as const,
   },
 ];
@@ -234,10 +262,26 @@ export default function AiHubPage() {
                     </span>
                   )}
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">{tool.name}</h3>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <h3 className="text-lg font-semibold">{tool.name}</h3>
+                  {"badge" in tool && tool.badge && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                      style={{
+                        backgroundColor: `rgba(${tool.accent}, 0.15)`,
+                        color: `rgb(${tool.accent})`,
+                      }}
+                    >
+                      {tool.badge}
+                    </span>
+                  )}
+                </div>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {tool.description}
                 </p>
+                {"limit" in tool && tool.limit && (
+                  <p className="mt-2 text-xs text-muted-foreground/70">{tool.limit}</p>
+                )}
                 {isLive && (
                   <span className="mt-5 flex items-center gap-1 text-sm font-medium text-foreground/80">
                     Open
