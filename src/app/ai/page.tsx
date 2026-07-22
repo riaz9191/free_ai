@@ -114,6 +114,15 @@ const integrations = [
     accent: "217, 70, 239",
     status: "live" as const,
   },
+  {
+    name: "Cloudflare Workers AI",
+    description:
+      "Llama, GPT-OSS, and Mistral chat plus Flux/SDXL image generation on Cloudflare's edge — free daily allowance.",
+    icon: MessageSquare,
+    href: "/ai/cloudflare",
+    accent: "249, 115, 22",
+    status: "live" as const,
+  },
 ];
 
 export default function AiHubPage() {
