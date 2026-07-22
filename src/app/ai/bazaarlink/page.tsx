@@ -9,7 +9,6 @@ import {
   ArrowUpRight,
   Send,
   Sparkles,
-  Terminal,
   KeyRound,
   FolderGit2,
   Square,
@@ -20,6 +19,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FloatingInfo } from "@/components/ai/floating-info";
 import { cn } from "@/lib/utils";
 
 const DOCS_URL = "https://bazaarlink.ai/docs";
@@ -220,8 +220,8 @@ export default function BazaarLinkPage() {
   const activeModel = models.find((m) => m.id === model);
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
           <Link
             href="/ai"
@@ -322,11 +322,12 @@ export default function BazaarLinkPage() {
         )}
       </header>
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-6 py-4">
         <div
           ref={scrollRef}
-          className="flex max-h-[55vh] min-h-[40vh] flex-col gap-3 overflow-y-auto rounded-2xl border border-border bg-muted/10 p-5"
+          className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-border bg-muted/10 p-5"
         >
+          <div className="flex flex-col gap-3">
           {messages.map((m, i) => (
             <div
               key={i}
@@ -359,10 +360,11 @@ export default function BazaarLinkPage() {
               )}
             </div>
           ))}
+          </div>
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
@@ -372,7 +374,7 @@ export default function BazaarLinkPage() {
             e.preventDefault();
             sendMessage();
           }}
-          className="flex items-center gap-2"
+          className="mt-3 flex shrink-0 items-center gap-2"
         >
           <input
             value={input}
@@ -404,81 +406,42 @@ export default function BazaarLinkPage() {
           )}
         </form>
 
-        {/* Instructions */}
-        <div className="mt-8 flex flex-col gap-6 rounded-2xl border border-border bg-muted/10 p-6">
-          <div className="flex items-center gap-2">
-            <Terminal className="size-4 text-orange-400" />
-            <h2 className="text-sm font-semibold">
-              Run this yourself — setup instructions
-            </h2>
-          </div>
-          <ol className="flex flex-col gap-3 text-sm text-muted-foreground">
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                1
-              </span>
-              <span>
-                Sign up at{" "}
-                <a
-                  href="https://bazaarlink.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2"
-                >
-                  bazaarlink.ai
-                  <ArrowUpRight className="size-3" />
-                </a>{" "}
-                and grab an API key from the dashboard.
-              </span>
+      </main>
+
+      <FloatingInfo accentClassName="text-orange-400">
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-foreground">Run this yourself</p>
+          <ol className="flex flex-col gap-2.5">
+            <li>
+              1. Sign up at{" "}
+              <a href="https://bazaarlink.ai" target="_blank" rel="noopener noreferrer">
+                bazaarlink.ai
+              </a>{" "}
+              and grab an API key.
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                2
-              </span>
-              <span>
-                <KeyRound className="mr-1.5 inline size-3.5" />
-                Add it to{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  .env.local
-                </code>
-                :
-                <pre className="mt-1 w-full overflow-x-auto rounded-lg bg-muted/40 p-3 font-mono text-xs text-foreground">
-                  BAZAARLINK_API_KEY=sk-bl-xxx
-                </pre>
-              </span>
+            <li>
+              2. <KeyRound className="mr-1 inline size-3.5" />
+              Add it to <code>.env.local</code>:
+              <pre>BAZAARLINK_API_KEY=sk-bl-xxx</pre>
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                3
-              </span>
-              <span>
-                Restart the dev server (
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  npm run dev
-                </code>
-                ), then chat above. The default model,{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  deepseek/deepseek-v4-flash:free
-                </code>
-                , is the only model on this gateway that&apos;s genuinely
-                free — every other model in{" "}
-                <strong className="font-medium text-foreground">Options</strong>{" "}
-                bills against your BazaarLink credits.
-              </span>
+            <li>
+              3. Restart <code>npm run dev</code>, then chat. Only{" "}
+              <code>deepseek/deepseek-v4-flash:free</code> is genuinely free —
+              everything else in Options bills your credits.
             </li>
           </ol>
           <a
             href={DOCS_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/40"
+            className="mt-1 flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs font-medium"
           >
-            <FolderGit2 className="size-4" />
+            <FolderGit2 className="size-3.5" />
             bazaarlink.ai/docs
-            <ArrowUpRight className="size-3.5" />
+            <ArrowUpRight className="size-3" />
           </a>
         </div>
-      </main>
+      </FloatingInfo>
     </div>
   );
 }

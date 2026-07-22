@@ -9,28 +9,23 @@ import {
   ArrowUpRight,
   Send,
   Sparkles,
-  Terminal,
-  KeyRound,
-  FolderGit2,
   Square,
   Trash2,
   Copy,
   Check,
   SlidersHorizontal,
   ChevronDown,
+  FolderGit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FloatingInfo } from "@/components/ai/floating-info";
 import { cn } from "@/lib/utils";
 
 const REPO_URL = "https://github.com/sixfingerdev/sixfinger-api";
 const STORAGE_KEY = "myai.sixfinger.chat";
 
 const MODELS = [
-  {
-    id: "deepseek-v4-flash",
-    label: "DeepSeek V4 Flash",
-    tag: "Free · Fast",
-  },
+  { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", tag: "Free · Fast" },
   { id: "claude-haiku-4-5", label: "Claude Haiku 4.5", tag: "Free" },
   { id: "claude-opus-4.1", label: "Claude Opus 4.1", tag: "Free" },
   { id: "gpt-5", label: "GPT-5", tag: "Free" },
@@ -39,7 +34,6 @@ const MODELS = [
   { id: "qwen3.7-max", label: "Qwen 3.7 Max", tag: "2 / 8 SF" },
 ];
 
-const DEFAULT_SYSTEM_PROMPT = "";
 const WELCOME: Message = {
   role: "assistant",
   content:
@@ -82,7 +76,7 @@ function CopyButton({ text }: { text: string }) {
 export default function AiPage() {
   const [model, setModel] = useState(MODELS[0].id);
   const [temperature, setTemperature] = useState(0.7);
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
+  const [systemPrompt, setSystemPrompt] = useState("");
   const [showOptions, setShowOptions] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
@@ -156,10 +150,7 @@ export default function AiPage() {
               assistantText += delta;
               setMessages((prev) => {
                 const copy = [...prev];
-                copy[copy.length - 1] = {
-                  role: "assistant",
-                  content: assistantText,
-                };
+                copy[copy.length - 1] = { role: "assistant", content: assistantText };
                 return copy;
               });
             }
@@ -195,15 +186,15 @@ export default function AiPage() {
   const activeModel = MODELS.find((m) => m.id === model);
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
           <Link
-            href="/"
+            href="/ai"
             className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-4" />
-            Back to MyAi
+            Back to AI Tools
           </Link>
           <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
             <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-blue-500">
@@ -240,9 +231,7 @@ export default function AiPage() {
           <div className="border-t border-border bg-background/95 px-6 py-4">
             <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:flex-wrap">
               <label className="flex flex-1 min-w-[220px] flex-col gap-1.5">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Model
-                </span>
+                <span className="text-xs font-medium text-muted-foreground">Model</span>
                 <div className="relative">
                   <select
                     value={model}
@@ -290,49 +279,49 @@ export default function AiPage() {
         )}
       </header>
 
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-4 px-6 py-8">
+      <main className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-6 py-4">
         <div
           ref={scrollRef}
-          className="flex max-h-[55vh] min-h-[40vh] flex-col gap-3 overflow-y-auto rounded-2xl border border-border bg-muted/10 p-5"
+          className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-border bg-muted/10 p-5"
         >
-          {messages.map((m, i) => (
-            <div
-              key={i}
-              className={cn(
-                "group max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-                m.role === "user"
-                  ? "ml-auto rounded-tr-sm bg-gradient-to-br from-violet-500 to-blue-500 text-white"
-                  : "rounded-tl-sm bg-muted/40 text-foreground"
-              )}
-            >
-              {m.content ? (
-                m.role === "assistant" ? (
-                  <div className="prose prose-sm prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-pre:rounded-lg prose-pre:bg-black/40 prose-code:text-violet-300">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {m.content}
-                    </ReactMarkdown>
-                  </div>
+          <div className="flex flex-col gap-3">
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={cn(
+                  "group max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+                  m.role === "user"
+                    ? "ml-auto rounded-tr-sm bg-gradient-to-br from-violet-500 to-blue-500 text-white"
+                    : "rounded-tl-sm bg-muted/40 text-foreground"
+                )}
+              >
+                {m.content ? (
+                  m.role === "assistant" ? (
+                    <div className="prose prose-sm prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-pre:rounded-lg prose-pre:bg-black/40 prose-code:text-violet-300">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    m.content
+                  )
                 ) : (
-                  m.content
-                )
-              ) : (
-                <span className="flex gap-1 py-1">
-                  <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
-                  <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
-                  <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground" />
-                </span>
-              )}
-              {m.role === "assistant" && m.content && (
-                <div className="mt-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <CopyButton text={m.content} />
-                </div>
-              )}
-            </div>
-          ))}
+                  <span className="flex gap-1 py-1">
+                    <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+                    <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+                    <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground" />
+                  </span>
+                )}
+                {m.role === "assistant" && m.content && (
+                  <div className="mt-2 opacity-0 transition-opacity group-hover:opacity-100">
+                    <CopyButton text={m.content} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
             {error}
           </div>
         )}
@@ -342,7 +331,7 @@ export default function AiPage() {
             e.preventDefault();
             sendMessage();
           }}
-          className="flex items-center gap-2"
+          className="mt-3 flex shrink-0 items-center gap-2"
         >
           <input
             value={input}
@@ -373,74 +362,35 @@ export default function AiPage() {
             </Button>
           )}
         </form>
+      </main>
 
-        {/* Instructions */}
-        <div className="mt-8 flex flex-col gap-6 rounded-2xl border border-border bg-muted/10 p-6">
-          <div className="flex items-center gap-2">
-            <Terminal className="size-4 text-violet-400" />
-            <h2 className="text-sm font-semibold">
-              Run this yourself — setup instructions
-            </h2>
-          </div>
-          <ol className="flex flex-col gap-3 text-sm text-muted-foreground">
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                1
-              </span>
-              Sign up for a free key at{" "}
-              <a
-                href="https://api.sixfinger.live"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-2"
-              >
-                api.sixfinger.live
-                <ArrowUpRight className="size-3" />
-              </a>{" "}
-              and verify your email.
+      <FloatingInfo accentClassName="text-violet-400">
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-foreground">Run this yourself</p>
+          <ol className="flex flex-col gap-2.5">
+            <li>
+              1. Sign up for a free key at <a href="https://api.sixfinger.live" target="_blank" rel="noopener noreferrer">api.sixfinger.live</a> and verify your email.
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                2
-              </span>
-              <span className="flex flex-wrap items-center gap-1.5">
-                <KeyRound className="size-3.5" />
-                Copy your API key from the dashboard, then add it to{" "}
-                <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  .env.local
-                </code>
-                :
-              </span>
-              <pre className="mt-1 w-full overflow-x-auto rounded-lg bg-muted/40 p-3 font-mono text-xs text-foreground">
-                SIXFINGER_API_KEY=sixfinger_xxx
-              </pre>
+            <li>
+              2. Copy your API key, then add it to <code>.env.local</code>:
+              <pre>SIXFINGER_API_KEY=sixfinger_xxx</pre>
             </li>
-            <li className="flex gap-3">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted/40 text-xs font-medium text-foreground">
-                3
-              </span>
-              Restart the dev server (
-              <code className="rounded bg-muted/50 px-1.5 py-0.5 font-mono text-xs text-foreground">
-                npm run dev
-              </code>
-              ) so the new env var loads, then chat above. Open{" "}
-              <strong className="font-medium text-foreground">Options</strong>{" "}
-              to switch models, set a system prompt, or tune temperature. The
-              default model (DeepSeek V4 Flash) is free — 0 SF per 1M tokens.
+            <li>
+              3. Restart <code>npm run dev</code>, then chat. Default model (DeepSeek V4 Flash) is free.
             </li>
           </ol>
           <a
             href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-4 py-2 text-sm font-medium transition-colors hover:bg-muted/40"
+            className="mt-1 flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs font-medium"
           >
-            <FolderGit2 className="size-4" />
+            <FolderGit2 className="size-3.5" />
             sixfingerdev/sixfinger-api
-            <ArrowUpRight className="size-3.5" />
+            <ArrowUpRight className="size-3" />
           </a>
         </div>
-      </main>
+      </FloatingInfo>
     </div>
   );
 }
