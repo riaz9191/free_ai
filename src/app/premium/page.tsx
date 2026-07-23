@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
-  ArrowLeft,
-  Sparkles,
   Zap,
   Infinity as InfinityIcon,
   Eye,
@@ -14,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NavBar } from "@/components/nav-bar";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -67,24 +66,7 @@ export default function PremiumPage() {
         <div className="absolute top-32 -right-32 size-[32rem] rounded-full bg-orange-600/15 blur-[120px]" />
       </div>
 
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
-          <Link
-            href="/ai"
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Back to AI Tools
-          </Link>
-          <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-amber-500 to-orange-600">
-              <Sparkles className="size-3.5 text-white" />
-            </span>
-            MyAi Premium
-          </div>
-          <div className="w-24" />
-        </div>
-      </header>
+      <NavBar />
 
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-16">
         <motion.div

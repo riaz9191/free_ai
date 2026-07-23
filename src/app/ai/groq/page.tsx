@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -18,11 +19,13 @@ import {
   ChevronDown,
   Search,
   Star,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloatingInfo } from "@/components/ai/floating-info";
 import { cn } from "@/lib/utils";
 
+const EASE = [0.16, 1, 0.3, 1] as const;
 const DOCS_URL = "https://console.groq.com/docs";
 const STORAGE_KEY = "myai.groq.chat";
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
@@ -47,13 +50,20 @@ const EXCLUDE_PATTERNS = [
 const BEST_MODEL = "openai/gpt-oss-120b";
 const BEST_FAST_MODEL = "llama-3.1-8b-instant";
 
+const SUGGESTED_PROMPTS = [
+  "Explain quantum computing simply",
+  "Write a Python function to reverse a linked list",
+  "Draft a polite email declining a meeting",
+  "What's the fastest way to learn Rust?",
+];
+
 const WELCOME: Message = {
   role: "assistant",
   content:
     "Hi! I'm running on Groq's LPU inference — Llama, GPT-OSS, and Qwen models responding at very high speed, all on Groq's free developer tier (rate-limited, no card required). Ask me anything, or open **Options** to switch models.",
 };
 
-type Message = { role: "user" | "assistant"; content: string };
+type Message = { role: "user" | "assistant"; content: string; tokPerSec?: number };
 type ModelOption = { id: string; label: string; tag: string; group: string };
 
 function loadStoredChat(): Message[] | null {
@@ -207,6 +217,7 @@ export default function GroqPage() {
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [liveTokPerSec, setLiveTokPerSec] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -256,16 +267,18 @@ export default function GroqPage() {
     setMessages([...nextMessages, { role: "assistant", content: "" }]);
     setInput("");
     setIsStreaming(true);
+    setLiveTokPerSec(null);
 
     const controller = new AbortController();
     abortRef.current = controller;
+    const startTime = performance.now();
 
     try {
       const res = await fetch("/api/ai/groq/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: nextMessages,
+          messages: nextMessages.map(({ role, content }) => ({ role, content })),
           model,
           temperature,
           system: systemPrompt,
@@ -301,9 +314,19 @@ export default function GroqPage() {
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
               assistantText += delta;
+              const elapsedSec = (performance.now() - startTime) / 1000;
+              const tokPerSec =
+                elapsedSec > 0.15
+                  ? Math.round(assistantText.length / 4 / elapsedSec)
+                  : null;
+              if (tokPerSec) setLiveTokPerSec(tokPerSec);
               setMessages((prev) => {
                 const copy = [...prev];
-                copy[copy.length - 1] = { role: "assistant", content: assistantText };
+                copy[copy.length - 1] = {
+                  role: "assistant",
+                  content: assistantText,
+                  tokPerSec: tokPerSec ?? undefined,
+                };
                 return copy;
               });
             }
@@ -339,7 +362,12 @@ export default function GroqPage() {
   const activeModel = models.find((m) => m.id === model);
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-32 left-1/3 size-[28rem] rounded-full bg-orange-600/10 blur-[130px]" />
+        <div className="absolute bottom-0 -right-24 size-[24rem] rounded-full bg-amber-500/10 blur-[130px]" />
+      </div>
+
       <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
           <Link
@@ -354,6 +382,24 @@ export default function GroqPage() {
               <Sparkles className="size-3.5 text-white" />
             </span>
             Groq Chat
+            {isStreaming && liveTokPerSec ? (
+              <motion.span
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="ml-1 hidden items-center gap-1 text-xs font-normal text-amber-400 sm:flex"
+              >
+                <Zap className="size-3 fill-amber-400" />
+                {liveTokPerSec} tok/s
+              </motion.span>
+            ) : (
+              <span className="ml-1 hidden items-center gap-1.5 text-xs font-normal text-muted-foreground sm:flex">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-green-400" />
+                </span>
+                Connected
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -380,8 +426,16 @@ export default function GroqPage() {
           </div>
         </div>
 
+        <AnimatePresence initial={false}>
         {showOptions && (
-          <div className="border-t border-border bg-background/95 px-6 py-4">
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: EASE }}
+            className="overflow-hidden border-t border-border bg-background/95"
+          >
+            <div className="px-6 py-4">
             <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:flex-wrap">
               <label className="flex flex-1 min-w-[220px] flex-col gap-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
@@ -433,24 +487,61 @@ export default function GroqPage() {
               </strong>{" "}
               is the fastest for quick replies.
             </p>
-          </div>
+            </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </header>
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-6 py-4">
-        <div
-          ref={scrollRef}
-          className="flex-1 min-h-0 overflow-y-auto rounded-2xl border border-border bg-muted/10 p-5"
-        >
+        <div className="relative flex-1 min-h-0">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 rounded-t-2xl bg-gradient-to-b from-background/80 to-transparent"
+          />
+          <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto rounded-2xl border border-border bg-muted/[0.07] p-5"
+          >
+          {messages.length === 1 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-5 px-4 text-center">
+              <span className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-600 to-amber-500 shadow-lg shadow-orange-500/20">
+                <Sparkles className="size-7 text-white" />
+              </span>
+              <div className="flex flex-col gap-2">
+                <h2 className="text-xl font-semibold tracking-tight">Ask Groq anything</h2>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  Llama, GPT-OSS, and Qwen models responding at very high
+                  speed, all on Groq&apos;s free developer tier — no card
+                  required.
+                </p>
+              </div>
+              <div className="flex max-w-lg flex-wrap justify-center gap-2">
+                {SUGGESTED_PROMPTS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setInput(p)}
+                    className="rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-orange-500/30 hover:text-foreground"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
           <div className="flex flex-col gap-3">
           {messages.map((m, i) => (
-            <div
+            <motion.div
               key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
               className={cn(
                 "group max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                 m.role === "user"
-                  ? "ml-auto rounded-tr-sm bg-gradient-to-br from-orange-600 to-amber-500 text-white"
-                  : "rounded-tl-sm bg-muted/40 text-foreground"
+                  ? "ml-auto rounded-tr-sm bg-gradient-to-br from-orange-600 to-amber-500 text-white shadow-sm shadow-orange-500/20"
+                  : "rounded-tl-sm border border-border/60 bg-muted/40 text-foreground shadow-sm"
               )}
             >
               {m.content ? (
@@ -469,12 +560,22 @@ export default function GroqPage() {
                 </span>
               )}
               {m.role === "assistant" && m.content && (
-                <div className="mt-2 opacity-0 transition-opacity group-hover:opacity-100">
-                  <CopyButton text={m.content} />
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                    <CopyButton text={m.content} />
+                  </div>
+                  {m.tokPerSec && (
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                      <Zap className="size-2.5" />
+                      {m.tokPerSec} tok/s
+                    </span>
+                  )}
                 </div>
               )}
-            </div>
+            </motion.div>
           ))}
+          </div>
+          )}
           </div>
         </div>
 
@@ -489,14 +590,14 @@ export default function GroqPage() {
             e.preventDefault();
             sendMessage();
           }}
-          className="mt-3 flex shrink-0 items-center gap-2"
+          className="mt-3 flex shrink-0 items-center gap-2 rounded-full border border-border bg-muted/[0.07] p-1.5 pl-4 transition-colors focus-within:border-orange-500/30"
         >
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={`Ask ${activeModel?.label ?? "Groq"} anything…`}
             disabled={isStreaming}
-            className="flex-1 rounded-full border border-border bg-muted/20 px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-foreground/20"
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
           {isStreaming ? (
             <Button

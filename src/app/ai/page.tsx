@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { NavBar } from "@/components/nav-bar";
 import {
-  ArrowLeft,
   ArrowUpRight,
-  Sparkles,
   MessageSquare,
   ImageIcon,
   Compass,
@@ -248,24 +247,7 @@ export default function AiHubPage() {
         <div className="absolute top-32 -right-32 size-[32rem] rounded-full bg-blue-600/15 blur-[130px]" />
       </div>
 
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-4" />
-            Back to MyAi
-          </Link>
-          <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-blue-500">
-              <Sparkles className="size-3.5 text-white" />
-            </span>
-            AI Tools
-          </div>
-          <div className="w-24" />
-        </div>
-      </header>
+      <NavBar />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-20">
         <div className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">

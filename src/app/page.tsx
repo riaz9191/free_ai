@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
-  Sun,
-  Moon,
   ArrowUpRight,
   ArrowUp,
   Check,
@@ -19,6 +16,7 @@ import {
   FolderGit2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NavBar } from "@/components/nav-bar";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -115,25 +113,6 @@ const marqueeWords = [
   "No rate limits",
   "Built in public",
 ];
-
-function ThemeToggle() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const isDark = mounted && resolvedTheme === "dark";
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="rounded-full text-muted-foreground hover:text-foreground"
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-    >
-      {mounted && (isDark ? <Sun className="size-4" /> : <Moon className="size-4" />)}
-    </Button>
-  );
-}
 
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -341,41 +320,7 @@ export default function Home() {
         <div className="animate-blob absolute top-[60%] left-1/3 size-[30rem] rounded-full bg-violet-600/35 blur-[110px] [animation-delay:2s]" />
       </div>
 
-      {/* Nav */}
-      <header className="sticky top-0 z-20 border-b border-border bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
-            <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-blue-500">
-              <Sparkles className="size-3.5 text-white" />
-            </span>
-            MyAi
-          </div>
-          <nav className="hidden gap-8 text-sm text-muted-foreground sm:flex">
-            <a href="#features" className="transition-colors hover:text-foreground">
-              Features
-            </a>
-            <a href="#integrations" className="transition-colors hover:text-foreground">
-              Integrations
-            </a>
-            <a href="#get-started" className="transition-colors hover:text-foreground">
-              Get started
-            </a>
-            <Link href="/ai" className="transition-colors hover:text-foreground">
-              AI Tools
-            </Link>
-          </nav>
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <Button
-              size="sm"
-              className="ml-1 rounded-full bg-foreground px-4 text-background hover:opacity-90"
-              onClick={() => scrollToId("get-started")}
-            >
-              Start free
-            </Button>
-          </div>
-        </div>
-      </header>
+      <NavBar />
 
       <main className="flex-1">
         {/* Hero */}
