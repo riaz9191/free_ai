@@ -429,11 +429,15 @@ export default function GroqPage() {
         <AnimatePresence initial={false}>
         {showOptions && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+            animate={{
+              height: "auto",
+              opacity: 1,
+              transitionEnd: { overflow: "visible" },
+            }}
+            exit={{ height: 0, opacity: 0, overflow: "hidden" }}
             transition={{ duration: 0.25, ease: EASE }}
-            className="overflow-hidden border-t border-border bg-background/95"
+            className="border-t border-border bg-background/95"
           >
             <div className="px-6 py-4">
             <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:flex-wrap">
