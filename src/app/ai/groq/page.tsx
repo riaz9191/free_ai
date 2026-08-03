@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
@@ -20,6 +21,7 @@ import {
   Search,
   Star,
   Zap,
+  Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FloatingInfo } from "@/components/ai/floating-info";
@@ -82,26 +84,48 @@ function ModelPicker({
   models,
   value,
   onChange,
+  onOpenChange,
 }: {
   models: ModelOption[];
   value: string;
   onChange: (id: string) => void;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(false);
+  const setOpen = (v: boolean | ((prev: boolean) => boolean)) => {
+    setOpenState((prev) => {
+      const next = typeof v === "function" ? v(prev) : v;
+      onOpenChange?.(next);
+      return next;
+    });
+  };
   const [query, setQuery] = useState("");
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const active = models.find((m) => m.id === value);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false);
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(e.target as Node) &&
+        !(e.target as HTMLElement).closest("[data-model-picker-menu]")
+      ) {
+        setOpenState(false);
+        onOpenChange?.(false);
         setQuery("");
       }
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, []);
+  }, [onOpenChange]);
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+  }, [open]);
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -118,6 +142,7 @@ function ModelPicker({
   return (
     <div ref={rootRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 text-left text-sm outline-none"
@@ -130,58 +155,118 @@ function ModelPicker({
         <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 z-30 mt-1.5 w-[min(22rem,80vw)] overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
-          <div className="relative border-b border-border">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search models…"
-              className="w-full bg-transparent py-2.5 pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground"
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <div
+              aria-hidden
+              className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
             />
-          </div>
-          <div className="max-h-72 overflow-y-auto p-1.5">
-            {groups.length === 0 && (
-              <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                No matches.
-              </p>
-            )}
-            {groups.map(([group, items]) => (
-              <div key={group} className="mb-1 last:mb-0">
-                <p className="px-2.5 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                  {group}
-                </p>
-                {items.map((m) => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      onChange(m.id);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                    className={cn(
-                      "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted/40",
-                      m.id === value && "bg-muted/60"
-                    )}
-                  >
-                    <span className="flex items-center gap-1.5 truncate">
-                      {(m.id === BEST_MODEL || m.id === BEST_FAST_MODEL) && (
-                        <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" />
-                      )}
-                      <span className="truncate">{m.label}</span>
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {m.tag}
-                    </span>
-                  </button>
+            <div
+              data-model-picker-menu
+              style={{ top: coords.top, left: coords.left, width: "min(22rem, 80vw)" }}
+              className="fixed z-50 overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+            >
+              <div className="relative border-b border-border">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search models…"
+                  className="w-full bg-transparent py-2.5 pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </div>
+              <div className="max-h-72 overflow-y-auto p-1.5">
+                {groups.length === 0 && (
+                  <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                    No matches.
+                  </p>
+                )}
+                {groups.map(([group, items]) => (
+                  <div key={group} className="mb-1 last:mb-0">
+                    <p className="px-2.5 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                      {group}
+                    </p>
+                    {items.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          onChange(m.id);
+                          setOpen(false);
+                          setQuery("");
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted/40",
+                          m.id === value && "bg-muted/60"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5 truncate">
+                          {(m.id === BEST_MODEL || m.id === BEST_FAST_MODEL) && (
+                            <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" />
+                          )}
+                          <span className="truncate">{m.label}</span>
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {m.tag}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          </>,
+          document.body
+        )}
+    </div>
+  );
+}
+
+function splitThinking(content: string): {
+  thinking: string | null;
+  answer: string;
+  thinking_streaming: boolean;
+} {
+  const openIdx = content.indexOf("<think>");
+  if (openIdx === -1) return { thinking: null, answer: content, thinking_streaming: false };
+
+  const before = content.slice(0, openIdx);
+  const afterOpen = content.slice(openIdx + "<think>".length);
+  const closeIdx = afterOpen.indexOf("</think>");
+
+  if (closeIdx === -1) {
+    return { thinking: afterOpen, answer: before, thinking_streaming: true };
+  }
+
+  const thinking = afterOpen.slice(0, closeIdx);
+  const after = afterOpen.slice(closeIdx + "</think>".length);
+  return { thinking, answer: (before + after).trim(), thinking_streaming: false };
+}
+
+function ThinkingBlock({ thinking, streaming }: { thinking: string; streaming: boolean }) {
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
+  const open = manualOpen ?? streaming;
+
+  return (
+    <div className="mb-2 rounded-lg border border-border/60 bg-muted/20">
+      <button
+        type="button"
+        onClick={() => setManualOpen(!open)}
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Brain className="size-3" />
+        {streaming ? "Thinking…" : "Thoughts"}
+        <ChevronDown
+          className={cn("ml-auto size-3 transition-transform", open && "rotate-180")}
+        />
+      </button>
+      {open && (
+        <p className="max-h-48 overflow-y-auto border-t border-border/60 px-2.5 py-2 text-xs whitespace-pre-wrap text-muted-foreground">
+          {thinking.trim()}
+        </p>
       )}
     </div>
   );
@@ -550,9 +635,21 @@ export default function GroqPage() {
             >
               {m.content ? (
                 m.role === "assistant" ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-pre:rounded-lg prose-pre:bg-black/40 prose-code:text-orange-300">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                  </div>
+                  (() => {
+                    const { thinking, answer, thinking_streaming } = splitThinking(m.content);
+                    return (
+                      <>
+                        {thinking && (
+                          <ThinkingBlock thinking={thinking} streaming={thinking_streaming} />
+                        )}
+                        {answer && (
+                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-pre:rounded-lg prose-pre:bg-black/40 prose-code:text-orange-300">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()
                 ) : (
                   m.content
                 )
