@@ -39,6 +39,7 @@ const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] }
 
 const STORAGE_KEY = "myai.myai.conversations";
 const THEME_KEY = "myai.theme";
+const ACCESS_CODE_KEY = "myai.accessCode";
 const AUTO = "auto";
 
 type Category = "fast" | "coding" | "heavy" | "reasoning" | "agentic" | "multimodal";
@@ -129,11 +130,12 @@ async function streamChat(
   modelOption: ModelOption,
   messages: Message[],
   signal: AbortSignal,
+  accessCode: string,
   onDelta: (content: string, reasoning: string) => void
 ) {
-  const res = await fetch("/api/ai/nvidia/chat", {
+  const res = await fetch("/api/ai/myai/chat", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-access-code": accessCode },
     body: JSON.stringify({
       messages: messages.map(({ role, content }) => ({ role, content })),
       model: modelOption.id,
@@ -512,12 +514,41 @@ export default function MyAiPage() {
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
+  const [accessCode, setAccessCode] = useState("");
+  const [accessGranted, setAccessGranted] = useState<boolean | null>(null);
+  const [accessInput, setAccessInput] = useState("");
+  const [accessChecking, setAccessChecking] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllers = useRef(new Map<string, AbortController>());
   const isStreaming = streamingId !== null && streamingId === activeId;
   const pal = PALETTES[theme];
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
+
+  async function checkAccess(code: string, silent = false) {
+    setAccessChecking(true);
+    if (!silent) setAccessError(null);
+    try {
+      const res = await fetch("/api/ai/myai/verify", {
+        method: "POST",
+        headers: { "x-access-code": code },
+      });
+      if (res.ok) {
+        setAccessCode(code);
+        setAccessGranted(true);
+        localStorage.setItem(ACCESS_CODE_KEY, code);
+      } else {
+        setAccessGranted(false);
+        if (!silent) setAccessError("Incorrect access code.");
+      }
+    } catch {
+      setAccessGranted(false);
+      if (!silent) setAccessError("Couldn't reach the server. Try again.");
+    } finally {
+      setAccessChecking(false);
+    }
+  }
 
   useEffect(() => {
     const stored = loadConversations();
@@ -533,6 +564,7 @@ export default function MyAiPage() {
       setTheme("light");
     }
     setMounted(true);
+    checkAccess(localStorage.getItem(ACCESS_CODE_KEY) || "", true);
   }, []);
 
   useEffect(() => {
@@ -580,7 +612,7 @@ export default function MyAiPage() {
 
   async function sendMessage(textToSend?: string) {
     const text = (textToSend || input).trim();
-    if (!text || !active || abortControllers.current.has(active.id)) return;
+    if (!text || !active || !accessGranted || abortControllers.current.has(active.id)) return;
 
     setError(null);
     const nextMessages: Message[] = [...active.messages, { role: "user", content: text }];
@@ -602,7 +634,7 @@ export default function MyAiPage() {
     abortControllers.current.set(convId, controller);
 
     try {
-      await streamChat(modelOption, nextMessages, controller.signal, (content, reasoning) => {
+      await streamChat(modelOption, nextMessages, controller.signal, accessCode, (content, reasoning) => {
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== convId) return c;
@@ -644,8 +676,60 @@ export default function MyAiPage() {
   const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
   const pickedModel = lastAssistant?.modelId ? MODEL_BY_ID.get(lastAssistant.modelId) : undefined;
 
-  if (!mounted) {
+  if (!mounted || accessGranted === null) {
     return <div style={{ background: PALETTES.dark.bg }} className="h-dvh" />;
+  }
+
+  if (!accessGranted) {
+    return (
+      <div
+        style={{ background: pal.bg, color: pal.text }}
+        className={cn(inter.className, "flex h-dvh items-center justify-center px-4 max-w-7xl mx-auto")}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            checkAccess(accessInput.trim());
+          }}
+          style={{ borderColor: pal.border, background: pal.panel }}
+          className="flex w-full max-w-lg flex-col gap-3 rounded-xl border p-6 shadow-sm"
+        >
+          <div style={{ borderColor: pal.border, background: pal.bg, color: pal.text }} className="flex size-9 items-center justify-center rounded-lg border">
+            <Sparkles className="size-4" />
+          </div>
+          <div>
+            <h1 style={{ color: pal.text }} className="text-sm font-semibold">
+              MyAI.Studio is private
+            </h1>
+            <p style={{ color: pal.textMuted }} className="mt-1 text-xs leading-relaxed">
+              Enter the access code to continue.
+            </p>
+          </div>
+          <input
+            autoFocus
+            type="password"
+            value={accessInput}
+            onChange={(e) => setAccessInput(e.target.value)}
+            placeholder="Access code"
+            style={{ borderColor: pal.border, background: pal.inputBg, color: pal.text, fontSize: "14px" }}
+            className="rounded-lg border px-3 py-2 outline-none"
+          />
+          {accessError && (
+            <p style={{ color: pal.danger }} className="text-xs">
+              {accessError}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={accessChecking || !accessInput.trim()}
+            style={{ background: pal.accent, color: pal.accentText }}
+            className="rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-40"
+          >
+            {accessChecking ? "Checking…" : "Continue"}
+          </button>
+        </form>
+      </div>
+    );
   }
 
   const userBubbleStyle: CSSProperties =
