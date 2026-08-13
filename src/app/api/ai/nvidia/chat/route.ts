@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
     model?: string;
     temperature?: number;
     system?: string;
+    reasoning?: boolean;
   };
   try {
     body = await req.json();
@@ -57,6 +58,12 @@ export async function POST(req: NextRequest) {
       messages: fullMessages,
       temperature,
       stream: true,
+      ...(body.reasoning
+        ? {
+            chat_template_kwargs: { enable_thinking: true },
+            reasoning_budget: 16384,
+          }
+        : {}),
     }),
     signal: req.signal,
   });

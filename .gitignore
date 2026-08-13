@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/myai-agent
 /.pnp
 .pnp.*
 .yarn/*
