@@ -31,11 +31,44 @@ import {
   Cpu,
   Sun,
   Moon,
+  Mic,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+
+// Minimal Web Speech API types — not part of TypeScript's DOM lib.
+interface SpeechRecognitionResultLike {
+  isFinal: boolean;
+  0: { transcript: string };
+}
+interface SpeechRecognitionEvent extends Event {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResultLike>;
+}
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message?: string;
+}
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+}
+declare global {
+  interface Window {
+    SpeechRecognition?: new () => SpeechRecognition;
+    webkitSpeechRecognition?: new () => SpeechRecognition;
+  }
+}
 
 const STORAGE_KEY = "myai.myai.conversations";
 const THEME_KEY = "myai.theme";
@@ -519,8 +552,19 @@ export default function MyAiPage() {
   const [accessInput, setAccessInput] = useState("");
   const [accessChecking, setAccessChecking] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [micError, setMicError] = useState<string | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [speechStatus, setSpeechStatus] = useState<
+    "idle" | "listening" | "unsupported" | "insecure" | "error" | "ended-early"
+  >("idle");
+  const [speechStatusDetail, setSpeechStatusDetail] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortControllers = useRef(new Map<string, AbortController>());
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const speechRecognitionRef = useRef<SpeechRecognition | null>(null);
   const isStreaming = streamingId !== null && streamingId === activeId;
   const pal = PALETTES[theme];
 
@@ -669,6 +713,106 @@ export default function MyAiPage() {
 
   function stopGenerating() {
     if (active) abortControllers.current.get(active.id)?.abort();
+  }
+
+  async function startRecording() {
+    setMicError(null);
+    setLiveTranscript("");
+    setSpeechStatus("idle");
+    setSpeechStatusDetail(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        if (blob.size === 0) return;
+
+        setIsTranscribing(true);
+        try {
+          const form = new FormData();
+          form.append("audio", blob, "audio.webm");
+          const res = await fetch("/api/ai/myai/transcribe", {
+            method: "POST",
+            headers: { "x-access-code": accessCode },
+            body: form,
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data?.error || `Transcription failed (${res.status})`);
+          const text = (data.text || "").trim();
+          if (text) setInput((prev) => (prev ? `${prev} ${text}` : text));
+        } catch (e) {
+          setMicError(e instanceof Error ? e.message : "Transcription failed");
+        } finally {
+          setIsTranscribing(false);
+          setLiveTranscript("");
+        }
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+
+      // Live interim captions via the browser's built-in speech recognition —
+      // Groq Whisper (above) still supplies the final, more accurate text
+      // once recording stops; this is just a preview while speaking.
+      const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognitionCtor) {
+        setSpeechStatus("unsupported");
+        setSpeechStatusDetail("This browser has no SpeechRecognition API.");
+      } else if (!window.isSecureContext) {
+        setSpeechStatus("insecure");
+        setSpeechStatusDetail("Needs HTTPS or localhost.");
+      } else {
+        const recognition = new SpeechRecognitionCtor();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = navigator.language || "en-US";
+        let gotAnyResult = false;
+        recognition.onstart = () => {
+          setSpeechStatus("listening");
+          setSpeechStatusDetail(null);
+        };
+        recognition.onresult = (event) => {
+          gotAnyResult = true;
+          let text = "";
+          for (let i = 0; i < event.results.length; i++) {
+            text += event.results[i][0].transcript;
+          }
+          setLiveTranscript(text);
+        };
+        recognition.onerror = (event) => {
+          setSpeechStatus("error");
+          setSpeechStatusDetail(event.error);
+        };
+        recognition.onend = () => {
+          speechRecognitionRef.current = null;
+          setSpeechStatus((prev) =>
+            prev === "listening" && !gotAnyResult ? "ended-early" : prev
+          );
+        };
+        speechRecognitionRef.current = recognition;
+        try {
+          recognition.start();
+        } catch (e) {
+          setSpeechStatus("error");
+          setSpeechStatusDetail(e instanceof Error ? e.message : "start() threw");
+        }
+      }
+    } catch {
+      setMicError("Microphone access denied or unavailable.");
+    }
+  }
+
+  function stopRecording() {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    speechRecognitionRef.current?.stop();
+    speechRecognitionRef.current = null;
+    setIsRecording(false);
   }
 
   const messages = active?.messages ?? [];
@@ -1072,6 +1216,28 @@ export default function MyAiPage() {
 
           {/* Bottom Floating Command Capsule */}
           <div className="relative z-20 mx-auto w-full max-w-2xl px-4 pb-5">
+            {micError && (
+              <div
+                style={{ color: pal.danger }}
+                className="mb-2 px-1 text-xs"
+              >
+                {micError}
+              </div>
+            )}
+            {isRecording && (
+              <div style={{ color: pal.textFaint }} className="mb-2 px-1 text-xs">
+                {speechStatus === "idle" && "Starting live captions…"}
+                {speechStatus === "listening" && "Live captions active"}
+                {speechStatus === "unsupported" &&
+                  `Live captions not supported in this browser — final transcript still works on stop. (${speechStatusDetail})`}
+                {speechStatus === "insecure" &&
+                  `Live captions need HTTPS or localhost. (${speechStatusDetail})`}
+                {speechStatus === "error" &&
+                  `Live captions error: ${speechStatusDetail} — final transcript still works on stop.`}
+                {speechStatus === "ended-early" &&
+                  "Live captions stopped without hearing anything — final transcript still works on stop."}
+              </div>
+            )}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1081,13 +1247,47 @@ export default function MyAiPage() {
               className="relative flex items-center gap-1.5 rounded-xl border p-2"
             >
               <input
-                value={input}
+                value={isRecording ? liveTranscript : input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={isAuto ? "Ask anything… Smart route will assign the best model" : "Ask MyAI…"}
-                disabled={isStreaming}
-                style={{ color: pal.text, fontSize: "14px" }}
+                placeholder={
+                  isRecording
+                    ? "Listening…"
+                    : isAuto
+                      ? "Ask anything… Smart route will assign the best model"
+                      : "Ask MyAI…"
+                }
+                disabled={isStreaming || isRecording}
+                style={{ color: isRecording ? pal.textMuted : pal.text, fontSize: "14px" }}
                 className="flex-1 bg-transparent px-2.5 outline-none placeholder:opacity-50"
               />
+
+              <Button
+                type="button"
+                size="icon"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isStreaming || isTranscribing}
+                style={
+                  isRecording
+                    ? { background: pal.dangerBg, color: pal.danger, borderColor: pal.border }
+                    : { background: pal.panel, color: pal.textMuted, borderColor: pal.border }
+                }
+                className="size-8 rounded-lg border disabled:opacity-40"
+                aria-label={isRecording ? "Stop recording" : "Record voice message"}
+              >
+                {isTranscribing ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : isRecording ? (
+                  <span className="relative flex size-2.5">
+                    <span
+                      style={{ background: pal.danger }}
+                      className="absolute inline-flex size-full animate-ping rounded-full opacity-75"
+                    />
+                    <span style={{ background: pal.danger }} className="relative inline-flex size-2.5 rounded-full" />
+                  </span>
+                ) : (
+                  <Mic className="size-3.5" />
+                )}
+              </Button>
 
               {isStreaming ? (
                 <Button
