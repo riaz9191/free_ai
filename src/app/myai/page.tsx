@@ -75,7 +75,7 @@ const THEME_KEY = "myai.theme";
 const ACCESS_CODE_KEY = "myai.accessCode";
 const AUTO = "auto";
 
-type Category = "fast" | "coding" | "heavy" | "reasoning" | "agentic" | "multimodal";
+type Category = "fast" | "coding" | "heavy" | "reasoning" | "agentic" | "multimodal" | "image";
 
 type ModelOption = {
   id: string;
@@ -101,10 +101,12 @@ const MODELS: ModelOption[] = [
   { id: "openai/gpt-oss-20b", label: "GPT-OSS 20B", tag: "Fast & light", group: "OpenAI", category: "fast", icon: Zap },
   { id: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", tag: "General", group: "Meta", category: "heavy", icon: Brain },
   { id: "mistralai/mistral-nemotron", label: "Mistral Nemotron", tag: "General", group: "Mistral AI", category: "fast", icon: Zap },
+  { id: "pollinations/image", label: "Image Generation", tag: "Text-to-image", group: "Pollinations", category: "image", icon: ImageIcon },
 ];
 
 const MODEL_BY_ID = new Map(MODELS.map((m) => [m.id, m]));
 const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b";
+const IMAGE_MODEL_ID = "pollinations/image";
 
 const CODING_WORDS = [
   "code", "function", "bug", "debug", "script", "python", "javascript",
@@ -120,22 +122,31 @@ const AGENTIC_WORDS = [
   "orchestrat", "pipeline",
 ];
 const MULTIMODAL_WORDS = [
-  "image", "screenshot", "photo", "diagram", "picture", "chart", "figma", "ui design",
+  "screenshot", "diagram", "chart", "figma", "ui design", "explain this image",
 ];
 const HEAVY_CODING_WORDS = [
   "build", "implement", "architecture", "design a", "full app", "large", "complex",
+];
+const IMAGE_GEN_WORDS = [
+  "generate an image", "generate a picture", "generate an picture", "generate art",
+  "draw", "paint", "create an image", "create a picture", "make an image",
+  "make a picture", "image of", "picture of", "photo of", "illustration of",
+  "text to image", "text-to-image", "render an image", "generate a photo",
+  "generate a logo", "design a logo", "create a logo", "wallpaper of",
 ];
 
 function classify(text: string): Category {
   const t = text.toLowerCase();
   const score = (words: string[]) => words.reduce((n, w) => n + (t.includes(w) ? 1 : 0), 0);
 
+  const imageGen = score(IMAGE_GEN_WORDS);
   const coding = score(CODING_WORDS);
   const reasoning = score(REASONING_WORDS);
   const agentic = score(AGENTIC_WORDS);
   const multimodal = score(MULTIMODAL_WORDS);
   const heavySignal = score(HEAVY_CODING_WORDS);
 
+  if (imageGen > 0) return "image";
   if (multimodal > 0) return "multimodal";
   if (agentic > 0) return "agentic";
   if (reasoning > 0) return "reasoning";
@@ -150,7 +161,13 @@ function pickModel(text: string): ModelOption {
   return candidates[0] ?? MODEL_BY_ID.get(DEFAULT_MODEL)!;
 }
 
-type Message = { role: "user" | "assistant"; content: string; reasoning?: string; modelId?: string };
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+  reasoning?: string;
+  modelId?: string;
+  imageUrl?: string;
+};
 type Conversation = {
   id: string;
   title: string;
@@ -158,6 +175,22 @@ type Conversation = {
   messages: Message[];
   createdAt: number;
 };
+
+async function generateImage(
+  prompt: string,
+  signal: AbortSignal,
+  accessCode: string
+): Promise<string> {
+  const res = await fetch("/api/ai/myai/image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-access-code": accessCode },
+    body: JSON.stringify({ prompt }),
+    signal,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || `Image generation failed (${res.status})`);
+  return data.imageUrl as string;
+}
 
 async function streamChat(
   modelOption: ModelOption,
@@ -678,15 +711,16 @@ export default function MyAiPage() {
     abortControllers.current.set(convId, controller);
 
     try {
-      await streamChat(modelOption, nextMessages, controller.signal, accessCode, (content, reasoning) => {
+      if (modelOption.id === IMAGE_MODEL_ID) {
+        const imageUrl = await generateImage(text, controller.signal, accessCode);
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== convId) return c;
             const copy = [...c.messages];
             copy[copy.length - 1] = {
               role: "assistant",
-              content,
-              reasoning: reasoning || undefined,
+              content: "",
+              imageUrl,
               modelId: modelOption.id,
             };
             return { ...c, messages: copy };
@@ -695,7 +729,26 @@ export default function MyAiPage() {
         if (convId === activeId) {
           scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
         }
-      });
+      } else {
+        await streamChat(modelOption, nextMessages, controller.signal, accessCode, (content, reasoning) => {
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== convId) return c;
+              const copy = [...c.messages];
+              copy[copy.length - 1] = {
+                role: "assistant",
+                content,
+                reasoning: reasoning || undefined,
+                modelId: modelOption.id,
+              };
+              return { ...c, messages: copy };
+            })
+          );
+          if (convId === activeId) {
+            scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+          }
+        });
+      }
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") {
         // stopped by user
@@ -1154,7 +1207,14 @@ export default function MyAiPage() {
                           <ReasoningBlock text={m.reasoning} streaming={isStreaming && isLast && !m.content} pal={pal} />
                         )}
 
-                        {m.content ? (
+                        {m.imageUrl ? (
+                          <img
+                            src={m.imageUrl}
+                            alt={messages[i - 1]?.content || "Generated image"}
+                            className="max-w-full rounded-lg"
+                            style={{ borderColor: pal.border }}
+                          />
+                        ) : m.content ? (
                           isAssistant ? (
                             <div
                               className="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:rounded-lg prose-pre:border prose-pre:px-4 prose-pre:py-3.5 prose-code:font-mono"
@@ -1175,7 +1235,7 @@ export default function MyAiPage() {
                             <p className="whitespace-pre-wrap">{m.content}</p>
                           )
                         ) : !m.reasoning ? (
-                          <div className="flex items-center gap-1 py-1">
+                          <div className="flex items-center gap-2 py-1">
                             <span
                               style={{ background: pal.textFaint }}
                               className="size-1.5 animate-bounce rounded-full [animation-delay:-0.3s]"
@@ -1185,6 +1245,11 @@ export default function MyAiPage() {
                               className="size-1.5 animate-bounce rounded-full [animation-delay:-0.15s]"
                             />
                             <span style={{ background: pal.textFaint }} className="size-1.5 animate-bounce rounded-full" />
+                            {m.modelId === IMAGE_MODEL_ID && (
+                              <span style={{ color: pal.textFaint }} className="text-xs">
+                                Generating image…
+                              </span>
+                            )}
                           </div>
                         ) : null}
 
