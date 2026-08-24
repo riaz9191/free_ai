@@ -2,8 +2,6 @@ import { NextRequest } from "next/server";
 
 export const runtime = "nodejs";
 
-const POLLINATIONS_IMAGE_URL = "https://image.pollinations.ai/prompt";
-
 function isAuthorized(req: NextRequest): boolean {
   const required = process.env.MYAI_ACCESS_CODE;
   if (!required) return true;
@@ -15,15 +13,16 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Invalid or missing access code." }, { status: 401 });
   }
 
-  const apiKey = process.env.POLLINATIONS_API_KEY;
-  if (!apiKey) {
+  const workerUrl = process.env.IMAGE_WORKER_URL;
+  if (!workerUrl) {
     return Response.json(
-      { error: "Missing POLLINATIONS_API_KEY. Add it to your environment variables." },
+      { error: "Missing IMAGE_WORKER_URL. Add it to your environment variables." },
       { status: 500 }
     );
   }
+  const workerApiKey = process.env.IMAGE_WORKER_API_KEY ?? "";
 
-  let body: { prompt?: string; width?: number; height?: number; model?: string };
+  let body: { prompt?: string };
   try {
     body = await req.json();
   } catch {
@@ -35,17 +34,13 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "prompt is required" }, { status: 400 });
   }
 
-  const width = Math.min(1536, Math.max(256, body.width || 1024));
-  const height = Math.min(1536, Math.max(256, body.height || 1024));
-  const model = body.model || "flux";
-  const seed = Math.floor(Math.random() * 1_000_000);
-
-  const url =
-    `${POLLINATIONS_IMAGE_URL}/${encodeURIComponent(prompt)}` +
-    `?width=${width}&height=${height}&model=${encodeURIComponent(model)}&seed=${seed}&nologo=true`;
-
-  const upstream = await fetch(url, {
-    headers: { Authorization: `Bearer ${apiKey}` },
+  const upstream = await fetch(workerUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(workerApiKey ? { Authorization: `Bearer ${workerApiKey}` } : {}),
+    },
+    body: JSON.stringify({ prompt }),
     signal: req.signal,
   });
 
@@ -54,11 +49,8 @@ export async function POST(req: NextRequest) {
     const message =
       upstream.status === 429
         ? "Image generation is rate-limited right now — wait a few seconds and try again."
-        : `Pollinations API error (${upstream.status})`;
-    return Response.json(
-      { error: message, detail: text.slice(0, 500) },
-      { status: upstream.status || 502 }
-    );
+        : `Image worker error (${upstream.status})`;
+    return Response.json({ error: message, detail: text.slice(0, 500) }, { status: upstream.status || 502 });
   }
 
   const contentType = upstream.headers.get("content-type") || "image/jpeg";

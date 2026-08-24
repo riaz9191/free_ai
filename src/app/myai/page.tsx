@@ -33,6 +33,8 @@ import {
   Moon,
   Mic,
   Loader2,
+  Paperclip,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -85,6 +87,7 @@ type ModelOption = {
   category: Category;
   reasoning?: boolean;
   icon: typeof Zap;
+  imageEndpoint?: string;
 };
 
 const MODELS: ModelOption[] = [
@@ -101,12 +104,17 @@ const MODELS: ModelOption[] = [
   { id: "openai/gpt-oss-20b", label: "GPT-OSS 20B", tag: "Fast & light", group: "OpenAI", category: "fast", icon: Zap },
   { id: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", tag: "General", group: "Meta", category: "heavy", icon: Brain },
   { id: "mistralai/mistral-nemotron", label: "Mistral Nemotron", tag: "General", group: "Mistral AI", category: "fast", icon: Zap },
-  { id: "pollinations/image", label: "Image Generation", tag: "Text-to-image", group: "Pollinations", category: "image", icon: ImageIcon },
+  { id: "deepseek-ai/deepseek-v4-flash-0731", label: "DeepSeek V4 Flash", tag: "Reasoning", group: "DeepSeek", category: "reasoning", reasoning: true, icon: Brain },
+  { id: "nvidia/ising-calibration-1.5-31b", label: "Ising Calibration", tag: "Vision & multimodal", group: "NVIDIA", category: "multimodal", icon: ImageIcon },
+  { id: "meta/muse-glimmer-30b", label: "Muse Glimmer", tag: "General", group: "Meta", category: "fast", icon: Zap },
+  { id: "thinkingmachines/inkling", label: "Inkling", tag: "General", group: "Thinking Machines", category: "fast", icon: Zap },
+  { id: "poolside/laguna-xs-2.1", label: "Laguna XS", tag: "Fast coding", group: "Poolside", category: "coding", icon: Code2 },
+  { id: "pollinations/image", label: "Image Generation", tag: "Text-to-image", group: "Image", category: "image", icon: ImageIcon, imageEndpoint: "/api/ai/myai/image" },
+  { id: "worker/image", label: "Image Generation (Alt)", tag: "Text-to-image (alt)", group: "Image", category: "image", icon: ImageIcon, imageEndpoint: "/api/ai/myai/image-worker" },
 ];
 
 const MODEL_BY_ID = new Map(MODELS.map((m) => [m.id, m]));
 const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b";
-const IMAGE_MODEL_ID = "pollinations/image";
 
 const CODING_WORDS = [
   "code", "function", "bug", "debug", "script", "python", "javascript",
@@ -179,9 +187,10 @@ type Conversation = {
 async function generateImage(
   prompt: string,
   signal: AbortSignal,
-  accessCode: string
+  accessCode: string,
+  endpoint: string
 ): Promise<string> {
-  const res = await fetch("/api/ai/myai/image", {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-access-code": accessCode },
     body: JSON.stringify({ prompt }),
@@ -203,7 +212,16 @@ async function streamChat(
     method: "POST",
     headers: { "Content-Type": "application/json", "x-access-code": accessCode },
     body: JSON.stringify({
-      messages: messages.map(({ role, content }) => ({ role, content })),
+      messages: messages.map(({ role, content, imageUrl }) => ({
+        role,
+        content:
+          role === "user" && imageUrl
+            ? [
+                { type: "text", text: content },
+                { type: "image_url", image_url: { url: imageUrl } },
+              ]
+            : content,
+      })),
       model: modelOption.id,
       reasoning: !!modelOption.reasoning,
     }),
@@ -577,6 +595,8 @@ export default function MyAiPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [input, setInput] = useState("");
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("dark");
@@ -692,7 +712,10 @@ export default function MyAiPage() {
     if (!text || !active || !accessGranted || abortControllers.current.has(active.id)) return;
 
     setError(null);
-    const nextMessages: Message[] = [...active.messages, { role: "user", content: text }];
+    const nextMessages: Message[] = [
+      ...active.messages,
+      { role: "user", content: text, ...(attachedImage ? { imageUrl: attachedImage } : {}) },
+    ];
     const isFirst = active.messages.length === 0;
     const convId = active.id;
 
@@ -705,14 +728,20 @@ export default function MyAiPage() {
       title: isFirst ? text.slice(0, 36) : c.title,
     }));
     setInput("");
+    setAttachedImage(null);
     setStreamingId(convId);
 
     const controller = new AbortController();
     abortControllers.current.set(convId, controller);
 
     try {
-      if (modelOption.id === IMAGE_MODEL_ID) {
-        const imageUrl = await generateImage(text, controller.signal, accessCode);
+      if (modelOption.category === "image") {
+        const imageUrl = await generateImage(
+          text,
+          controller.signal,
+          accessCode,
+          modelOption.imageEndpoint || "/api/ai/myai/image"
+        );
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== convId) return c;
@@ -757,6 +786,7 @@ export default function MyAiPage() {
         setConversations((prev) =>
           prev.map((c) => (c.id === convId ? { ...c, messages: c.messages.slice(0, -1) } : c))
         );
+        if (convId === activeId) setInput(text);
       }
     } finally {
       abortControllers.current.delete(convId);
@@ -1207,7 +1237,17 @@ export default function MyAiPage() {
                           <ReasoningBlock text={m.reasoning} streaming={isStreaming && isLast && !m.content} pal={pal} />
                         )}
 
-                        {m.imageUrl ? (
+                        {m.imageUrl && !isAssistant ? (
+                          <div className="flex flex-col gap-2">
+                            <img
+                              src={m.imageUrl}
+                              alt="Attached"
+                              className="max-w-full rounded-lg"
+                              style={{ borderColor: pal.border }}
+                            />
+                            {m.content && <p className="whitespace-pre-wrap">{m.content}</p>}
+                          </div>
+                        ) : m.imageUrl ? (
                           <img
                             src={m.imageUrl}
                             alt={messages[i - 1]?.content || "Generated image"}
@@ -1245,7 +1285,7 @@ export default function MyAiPage() {
                               className="size-1.5 animate-bounce rounded-full [animation-delay:-0.15s]"
                             />
                             <span style={{ background: pal.textFaint }} className="size-1.5 animate-bounce rounded-full" />
-                            {m.modelId === IMAGE_MODEL_ID && (
+                            {mModel?.category === "image" && (
                               <span style={{ color: pal.textFaint }} className="text-xs">
                                 Generating image…
                               </span>
@@ -1303,6 +1343,37 @@ export default function MyAiPage() {
                   "Live captions stopped without hearing anything — final transcript still works on stop."}
               </div>
             )}
+            {attachedImage && (
+              <div
+                style={{ borderColor: pal.border, background: pal.inputBg }}
+                className="mb-2 flex w-fit items-center gap-2 rounded-lg border p-1.5"
+              >
+                <img src={attachedImage} alt="Attachment preview" className="size-8 rounded object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setAttachedImage(null)}
+                  style={{ color: pal.textMuted }}
+                  className="mr-1 rounded p-1 hover:opacity-70"
+                  aria-label="Remove attached image"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => setAttachedImage(reader.result as string);
+                reader.readAsDataURL(file);
+              }}
+            />
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1311,6 +1382,18 @@ export default function MyAiPage() {
               style={{ borderColor: pal.border, background: pal.inputBg }}
               className="relative flex items-center gap-1.5 rounded-xl border p-2"
             >
+              <Button
+                type="button"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isStreaming || isRecording}
+                style={{ background: pal.panel, color: pal.textMuted, borderColor: pal.border }}
+                className="size-8 rounded-lg border disabled:opacity-40"
+                aria-label="Attach image"
+              >
+                <Paperclip className="size-3.5" />
+              </Button>
+
               <input
                 value={isRecording ? liveTranscript : input}
                 onChange={(e) => setInput(e.target.value)}

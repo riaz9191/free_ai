@@ -5,7 +5,13 @@ export const runtime = "nodejs";
 const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b";
 
-type ChatMessage = { role: "user" | "assistant" | "system"; content: string };
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+type ChatMessage = {
+  role: "user" | "assistant" | "system";
+  content: string | ContentPart[];
+};
 
 function isAuthorized(req: NextRequest): boolean {
   const required = process.env.MYAI_ACCESS_CODE;
