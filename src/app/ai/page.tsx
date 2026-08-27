@@ -32,6 +32,19 @@ const CATEGORIES: { id: Category | "all"; label: string }[] = [
 // image/search utilities, not general chat models) sort to the end.
 const integrations = [
   {
+    name: "Vercel AI Gateway",
+    description:
+      "One API key routes to OpenAI, Anthropic, Google, xAI, and more with automatic fallback and usage tracking.",
+    icon: MessageSquare,
+    href: "/ai/vercel",
+    accent: "0, 0, 0",
+    status: "live" as const,
+    category: "chat" as const,
+    limit: "Pay-per-token · card required",
+    rank: 0,
+    isNew: true,
+  },
+  {
     name: "Groq Chat",
     description:
       "Llama, GPT-OSS, and Qwen at very high inference speed — Groq's free developer tier, no card required.",
