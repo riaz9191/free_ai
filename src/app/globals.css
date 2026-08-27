@@ -84,7 +84,7 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(10.21% 0.00674 18.223);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -94,7 +94,7 @@
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
+  --muted: oklch(21.789% 0.03145 19.889);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
@@ -123,9 +123,15 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 1.0625rem;
   }
   html {
     @apply font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-light;
   }
 }
 

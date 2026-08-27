@@ -35,6 +35,7 @@ import {
   Loader2,
   Paperclip,
   X,
+  Music,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -77,7 +78,7 @@ const THEME_KEY = "myai.theme";
 const ACCESS_CODE_KEY = "myai.accessCode";
 const AUTO = "auto";
 
-type Category = "fast" | "coding" | "heavy" | "reasoning" | "agentic" | "multimodal" | "image";
+type Category = "fast" | "coding" | "heavy" | "reasoning" | "agentic" | "multimodal" | "image" | "music";
 
 type ModelOption = {
   id: string;
@@ -111,6 +112,7 @@ const MODELS: ModelOption[] = [
   { id: "poolside/laguna-xs-2.1", label: "Laguna XS", tag: "Fast coding", group: "Poolside", category: "coding", icon: Code2 },
   { id: "pollinations/image", label: "Image Generation", tag: "Text-to-image", group: "Image", category: "image", icon: ImageIcon, imageEndpoint: "/api/ai/myai/image" },
   { id: "worker/image", label: "Image Generation (Alt)", tag: "Text-to-image (alt)", group: "Image", category: "image", icon: ImageIcon, imageEndpoint: "/api/ai/myai/image-worker" },
+  { id: "xenova/musicgen-small", label: "Music Generation", tag: "Text-to-music (in-browser)", group: "Music", category: "music", icon: Music },
 ];
 
 const MODEL_BY_ID = new Map(MODELS.map((m) => [m.id, m]));
@@ -175,6 +177,7 @@ type Message = {
   reasoning?: string;
   modelId?: string;
   imageUrl?: string;
+  audioUrl?: string;
 };
 type Conversation = {
   id: string;
@@ -199,6 +202,15 @@ async function generateImage(
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error(data?.error || `Image generation failed (${res.status})`);
   return data.imageUrl as string;
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function streamChat(
@@ -758,6 +770,46 @@ export default function MyAiPage() {
         if (convId === activeId) {
           scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
         }
+      } else if (modelOption.category === "music") {
+        const setStatus = (status: string) => {
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== convId) return c;
+              const copy = [...c.messages];
+              copy[copy.length - 1] = { role: "assistant", content: status, modelId: modelOption.id };
+              return { ...c, messages: copy };
+            })
+          );
+        };
+        setStatus("Loading music model in your browser (~656MB on first use)…");
+        const { generateMusicClientSide } = await import("@/lib/musicgen");
+        const blob = await generateMusicClientSide(text, (p) => {
+          const pct = Math.round(p.percent * 100);
+          setStatus(
+            p.phase === "loading"
+              ? `Loading model… ${pct}%`
+              : p.phase === "generating"
+                ? `Composing… ${pct}%`
+                : "Encoding audio…"
+          );
+        });
+        const audioUrl = await blobToDataUrl(blob);
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== convId) return c;
+            const copy = [...c.messages];
+            copy[copy.length - 1] = {
+              role: "assistant",
+              content: "",
+              audioUrl,
+              modelId: modelOption.id,
+            };
+            return { ...c, messages: copy };
+          })
+        );
+        if (convId === activeId) {
+          scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+        }
       } else {
         await streamChat(modelOption, nextMessages, controller.signal, accessCode, (content, reasoning) => {
           setConversations((prev) =>
@@ -1254,6 +1306,8 @@ export default function MyAiPage() {
                             className="max-w-full rounded-lg"
                             style={{ borderColor: pal.border }}
                           />
+                        ) : m.audioUrl ? (
+                          <audio controls src={m.audioUrl} className="w-full" />
                         ) : m.content ? (
                           isAssistant ? (
                             <div
@@ -1288,6 +1342,11 @@ export default function MyAiPage() {
                             {mModel?.category === "image" && (
                               <span style={{ color: pal.textFaint }} className="text-xs">
                                 Generating image…
+                              </span>
+                            )}
+                            {mModel?.category === "music" && (
+                              <span style={{ color: pal.textFaint }} className="text-xs">
+                                Composing music…
                               </span>
                             )}
                           </div>
