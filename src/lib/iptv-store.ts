@@ -17,10 +17,13 @@ const DATA_FILE = path.join(DATA_DIR, "iptv.json");
 const BLOB_PATHNAME = "iptv/channels.json";
 
 // Vercel's filesystem is read-only/ephemeral in production, so anything written to
-// disk there disappears on the next deploy. When a Blob store is connected
-// (BLOB_READ_WRITE_TOKEN is set), use that instead; otherwise fall back to a local
-// JSON file, which is enough for local dev or a self-hosted server with a real disk.
-const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+// disk there disappears on the next deploy. When a Blob store is connected to the
+// project, @vercel/blob authenticates automatically via Vercel's OIDC token at
+// runtime — no BLOB_READ_WRITE_TOKEN is issued for stores set up this way, so detect
+// the connection via BLOB_STORE_ID instead. Falls back to a local JSON file when
+// neither is present, which is enough for local dev or a self-hosted server with a
+// real disk.
+const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 
 async function readAll(): Promise<Channel[]> {
   if (useBlob) {
