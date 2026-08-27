@@ -14,8 +14,27 @@ export type Channel = {
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DATA_FILE = path.join(DATA_DIR, "iptv.json");
+const BLOB_PATHNAME = "iptv/channels.json";
+
+// Vercel's filesystem is read-only/ephemeral in production, so anything written to
+// disk there disappears on the next deploy. When a Blob store is connected
+// (BLOB_READ_WRITE_TOKEN is set), use that instead; otherwise fall back to a local
+// JSON file, which is enough for local dev or a self-hosted server with a real disk.
+const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 
 async function readAll(): Promise<Channel[]> {
+  if (useBlob) {
+    try {
+      const { head } = await import("@vercel/blob");
+      const blob = await head(BLOB_PATHNAME);
+      const res = await fetch(blob.url, { cache: "no-store" });
+      if (!res.ok) return [];
+      return (await res.json()) as Channel[];
+    } catch {
+      return [];
+    }
+  }
+
   try {
     const raw = await fs.readFile(DATA_FILE, "utf-8");
     return JSON.parse(raw) as Channel[];
@@ -25,6 +44,16 @@ async function readAll(): Promise<Channel[]> {
 }
 
 async function writeAll(channels: Channel[]): Promise<void> {
+  if (useBlob) {
+    const { put } = await import("@vercel/blob");
+    await put(BLOB_PATHNAME, JSON.stringify(channels), {
+      access: "public",
+      contentType: "application/json",
+      allowOverwrite: true,
+    });
+    return;
+  }
+
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(DATA_FILE, JSON.stringify(channels, null, 2), "utf-8");
 }
