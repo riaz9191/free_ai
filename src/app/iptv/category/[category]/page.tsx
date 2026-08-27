@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Tv, PlayCircle } from "lucide-react";
+import { ArrowLeft, Tv } from "lucide-react";
 import { getPublishedChannels } from "@/lib/iptv-store";
+import { ChannelCard } from "@/components/iptv/channel-card";
 
 export const dynamic = "force-dynamic";
 
@@ -55,21 +56,7 @@ export default async function CategoryPage({
 
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {channels.map((c) => (
-            <Link
-              key={c.id}
-              href={`/iptv/${c.id}`}
-              className="flex flex-col overflow-hidden rounded-xl border border-border bg-muted/5 transition-colors hover:bg-muted/10"
-            >
-              <div className="flex aspect-square w-full items-center justify-center overflow-hidden bg-black/40">
-                {c.logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.logo} alt="" className="size-full object-cover" />
-                ) : (
-                  <PlayCircle className="size-8 text-purple-400/70" />
-                )}
-              </div>
-              <span className="truncate px-2.5 py-2 text-xs font-medium">{c.name}</span>
-            </Link>
+            <ChannelCard key={c.id} channel={c} />
           ))}
         </div>
       </main>

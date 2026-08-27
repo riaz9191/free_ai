@@ -116,3 +116,11 @@ export async function deleteChannel(id: string): Promise<boolean> {
   await writeAll(next);
   return true;
 }
+
+export async function deleteChannels(ids: string[] | "all"): Promise<number> {
+  const channels = await readAll();
+  const idSet = ids === "all" ? null : new Set(ids);
+  const next = channels.filter((c) => (idSet ? !idSet.has(c.id) : false));
+  await writeAll(next);
+  return channels.length - next.length;
+}

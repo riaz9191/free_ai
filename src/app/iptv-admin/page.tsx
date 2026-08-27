@@ -13,7 +13,6 @@ import {
   Tv,
   CheckCircle2,
   XCircle,
-  ShieldCheck,
   ListChecks,
   ChevronDown,
   ChevronRight,
@@ -131,20 +130,9 @@ export default function IptvAdminPage() {
     });
   }
 
-  const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [category, setCategory] = useState("");
-  const [logo, setLogo] = useState("");
-  const [published, setPublished] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const [checkingUrl, setCheckingUrl] = useState(false);
-  const [urlCheck, setUrlCheck] = useState<{
-    checkedUrl: string;
-    ok: boolean;
-    error?: string;
-  } | null>(null);
+  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [loadingPlaylist, setLoadingPlaylist] = useState(false);
+  const [loadPlaylistError, setLoadPlaylistError] = useState<string | null>(null);
 
   const [mode, setMode] = useState<"single" | "bulk">("single");
 
@@ -214,71 +202,28 @@ export default function IptvAdminPage() {
     setChannels([]);
   }
 
-  async function checkUrl() {
-    const target = url.trim();
-    if (!target || checkingUrl) return;
-    setCheckingUrl(true);
-    setUrlCheck(null);
+  async function loadPlaylist() {
+    const target = playlistUrl.trim();
+    if (!target || loadingPlaylist) return;
+    setLoadingPlaylist(true);
+    setLoadPlaylistError(null);
     try {
-      const res = await fetch("/api/iptv-admin/check-url", {
+      const res = await fetch("/api/iptv-admin/fetch-playlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: target }),
       });
       const data = await res.json();
-      setUrlCheck({ checkedUrl: target, ok: Boolean(data.ok), error: data.error });
-    } catch (e) {
-      setUrlCheck({
-        checkedUrl: target,
-        ok: false,
-        error: e instanceof Error ? e.message : "Check failed",
-      });
-    } finally {
-      setCheckingUrl(false);
-    }
-  }
-
-  const urlVerified = urlCheck?.ok && urlCheck.checkedUrl === url.trim();
-
-  async function addChannel(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !url.trim() || !category.trim()) {
-      setFormError("Name, URL, and category are required");
-      return;
-    }
-    if (!urlVerified) {
-      setFormError("Check the stream URL first");
-      return;
-    }
-    setSubmitting(true);
-    setFormError(null);
-    try {
-      const res = await fetch("/api/iptv-admin/channels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          url: url.trim(),
-          category: category.trim(),
-          logo: logo.trim() || undefined,
-          published,
-        }),
-      });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data?.error || "Failed to add channel");
+        throw new Error(data?.error || "Failed to load playlist");
       }
-      setName("");
-      setUrl("");
-      setCategory("");
-      setLogo("");
-      setPublished(true);
-      setUrlCheck(null);
-      await loadChannels();
+      setBulkText(data.text);
+      setBulkResults({});
+      setMode("bulk");
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : "Failed to add channel");
+      setLoadPlaylistError(e instanceof Error ? e.message : "Failed to load playlist");
     } finally {
-      setSubmitting(false);
+      setLoadingPlaylist(false);
     }
   }
 
@@ -356,7 +301,8 @@ export default function IptvAdminPage() {
     });
   }
 
-  async function removeChannel(id: string) {
+  async function removeChannel(id: string, name: string) {
+    if (!window.confirm(`Delete "${name}"?`)) return;
     setChannels((prev) => prev.filter((c) => c.id !== id));
     await fetch(`/api/iptv-admin/channels/${id}`, { method: "DELETE" });
   }
@@ -379,6 +325,25 @@ export default function IptvAdminPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids, published: true }),
+    });
+  }
+
+  async function deleteCategory(category: string) {
+    const targets = channels.filter((c) => c.category === category);
+    if (!targets.length) return;
+    if (
+      !window.confirm(
+        `Delete all ${targets.length} channel${targets.length === 1 ? "" : "s"} in "${category}"? This can't be undone.`
+      )
+    ) {
+      return;
+    }
+    const ids = targets.map((c) => c.id);
+    setChannels((prev) => prev.filter((c) => c.category !== category));
+    await fetch("/api/iptv-admin/channels/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
     });
   }
 
@@ -453,7 +418,7 @@ export default function IptvAdminPage() {
       <main className="mx-auto flex w-full max-w-4xl flex-col px-6 py-10">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold tracking-tight">
-            {mode === "single" ? "Add a channel" : "Add multiple channels"}
+            {mode === "single" ? "Load a playlist from a URL" : "Add multiple channels"}
           </h1>
           <div className="flex items-center gap-1 rounded-full border border-border bg-muted/10 p-1">
             <button
@@ -466,7 +431,7 @@ export default function IptvAdminPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Single
+              From URL
             </button>
             <button
               type="button"
@@ -478,7 +443,7 @@ export default function IptvAdminPage() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              Bulk
+              Paste text
             </button>
           </div>
         </div>
@@ -592,107 +557,39 @@ export default function IptvAdminPage() {
         )}
 
         {mode === "single" && (
-        <form
-          onSubmit={addChannel}
-          className="mt-4 grid grid-cols-1 gap-3 rounded-2xl border border-border bg-muted/[0.05] p-5 sm:grid-cols-2"
-        >
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Channel name"
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-purple-500/40"
-          />
-          <input
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="Category (e.g. Sports, News)"
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-purple-500/40"
-          />
-          <div className="flex flex-col gap-2 sm:col-span-2">
-            <div className="flex items-center gap-2">
-              <input
-                value={url}
-                onChange={(e) => {
-                  setUrl(e.target.value);
-                  setUrlCheck(null);
-                }}
-                placeholder="Stream URL (.m3u8)"
-                className="flex-1 rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-purple-500/40"
-              />
-              <Button
-                type="button"
-                onClick={checkUrl}
-                disabled={!url.trim() || checkingUrl}
-                className="shrink-0 rounded-lg bg-muted/30 px-3 text-xs text-foreground hover:bg-muted/50"
-              >
-                {checkingUrl ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="size-3.5" />
-                    Check
-                  </span>
-                )}
-              </Button>
-            </div>
-
-            {urlCheck && urlCheck.checkedUrl === url.trim() && (
-              <div
-                className={cn(
-                  "flex items-center gap-1.5 text-xs",
-                  urlCheck.ok ? "text-emerald-400" : "text-red-400"
-                )}
-              >
-                {urlCheck.ok ? (
-                  <>
-                    <CheckCircle2 className="size-3.5" />
-                    Stream looks valid
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="size-3.5" />
-                    {urlCheck.error || "Not a valid stream"}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-          <input
-            value={logo}
-            onChange={(e) => setLogo(e.target.value)}
-            placeholder="Logo URL (optional)"
-            className="rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-purple-500/40 sm:col-span-2"
-          />
-
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-muted/5 p-5">
+          <p className="text-sm text-muted-foreground">
+            Paste a link to an M3U/M3U8 playlist file — one that itself contains many
+            channels — and it&rsquo;ll be fetched and parsed so you can check and add them below.
+          </p>
+          <div className="flex items-center gap-2">
             <input
-              type="checkbox"
-              checked={published}
-              onChange={(e) => setPublished(e.target.checked)}
-              className="size-4 rounded border-border"
+              value={playlistUrl}
+              onChange={(e) => {
+                setPlaylistUrl(e.target.value);
+                setLoadPlaylistError(null);
+              }}
+              placeholder="https://example.com/playlist.m3u8"
+              className="flex-1 rounded-lg border border-border bg-transparent px-3 py-2 text-sm outline-none focus:border-purple-500/40"
             />
-            Publish immediately
-          </label>
-
-          {formError && (
-            <p className="text-xs text-red-400 sm:col-span-2">{formError}</p>
-          )}
-
-          <Button
-            type="submit"
-            disabled={submitting || !urlVerified}
-            className="rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40 sm:col-span-2"
-          >
-            {submitting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <span className="flex items-center gap-1.5">
-                <Plus className="size-4" />
-                {urlVerified ? "Add channel" : "Check the URL to enable saving"}
-              </span>
-            )}
-          </Button>
-        </form>
+            <Button
+              type="button"
+              onClick={loadPlaylist}
+              disabled={!playlistUrl.trim() || loadingPlaylist}
+              className="shrink-0 rounded-lg bg-foreground text-background hover:opacity-90 disabled:opacity-40"
+            >
+              {loadingPlaylist ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <ListChecks className="size-4" />
+                  Load playlist
+                </span>
+              )}
+            </Button>
+          </div>
+          {loadPlaylistError && <p className="text-xs text-red-400">{loadPlaylistError}</p>}
+        </div>
         )}
 
         <div className="mt-10 flex items-center justify-between">
@@ -765,6 +662,25 @@ export default function IptvAdminPage() {
                     >
                       Publish all
                     </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCategory(category);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          deleteCategory(category);
+                        }
+                      }}
+                      className="flex shrink-0 items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs text-red-400 transition-colors hover:bg-red-500/20"
+                    >
+                      <Trash2 className="size-3.5" />
+                      Delete all
+                    </span>
                   </button>
 
                   {expanded && (
@@ -796,7 +712,7 @@ export default function IptvAdminPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => removeChannel(c.id)}
+                            onClick={() => removeChannel(c.id, c.name)}
                             className="flex shrink-0 items-center justify-center rounded-full p-2 text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-400"
                             aria-label="Delete channel"
                           >
