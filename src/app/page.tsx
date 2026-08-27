@@ -322,6 +322,17 @@ export default function Home() {
 
       <NavBar />
 
+      <Link
+        href="/pen-holiday-2026"
+        className="relative flex items-center justify-center gap-2 border-b border-border bg-muted/20 px-6 py-2.5 text-center text-xs font-medium text-foreground/80 transition-colors hover:bg-muted/30 hover:text-foreground"
+      >
+        <span className="rounded-full bg-gradient-to-r from-violet-500 to-blue-500 px-2 py-0.5 font-medium text-white">
+          New
+        </span>
+        PEN Global Holiday Schedule 2026 is here
+        <ArrowUpRight className="size-3.5" />
+      </Link>
+
       <main className="flex-1">
         {/* Hero */}
         <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-20 pb-28 lg:grid-cols-[1.05fr_0.95fr] lg:pt-28">
