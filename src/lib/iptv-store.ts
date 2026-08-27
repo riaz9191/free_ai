@@ -28,11 +28,11 @@ const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_ST
 async function readAll(): Promise<Channel[]> {
   if (useBlob) {
     try {
-      const { head } = await import("@vercel/blob");
-      const blob = await head(BLOB_PATHNAME);
-      const res = await fetch(blob.url, { cache: "no-store" });
-      if (!res.ok) return [];
-      return (await res.json()) as Channel[];
+      const { get } = await import("@vercel/blob");
+      const result = await get(BLOB_PATHNAME, { access: "private", useCache: false });
+      if (!result) return [];
+      const text = await new Response(result.stream).text();
+      return JSON.parse(text) as Channel[];
     } catch {
       return [];
     }
@@ -50,7 +50,7 @@ async function writeAll(channels: Channel[]): Promise<void> {
   if (useBlob) {
     const { put } = await import("@vercel/blob");
     await put(BLOB_PATHNAME, JSON.stringify(channels), {
-      access: "public",
+      access: "private",
       contentType: "application/json",
       allowOverwrite: true,
     });
