@@ -77,6 +77,13 @@ export default function BdixPage() {
 
   const candidates = useMemo(() => extractCandidates(bulkText), [bulkText]);
 
+  const working = candidates
+    .filter((c) => bulkResults[c]?.reachable)
+    .map((c) => [c, bulkResults[c]!] as [string, Result]);
+  const failed = candidates
+    .filter((c) => bulkResults[c] && !bulkResults[c]!.reachable)
+    .map((c) => [c, bulkResults[c]!] as [string, Result]);
+
   async function pasteFromClipboard() {
     try {
       const text = await navigator.clipboard.readText();
@@ -168,7 +175,7 @@ export default function BdixPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-10">
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">
             Is this website up?
@@ -237,9 +244,20 @@ export default function BdixPage() {
                   {isUp ? "Site is reachable" : "Site is not reachable"}
                 </span>
                 {result.finalUrl && (
-                  <span className="max-w-md truncate text-xs text-muted-foreground">
-                    {result.finalUrl}
-                  </span>
+                  isUp ? (
+                    <a
+                      href={result.finalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="max-w-md truncate text-xs text-muted-foreground underline-offset-2 hover:text-emerald-400 hover:underline"
+                    >
+                      {result.finalUrl}
+                    </a>
+                  ) : (
+                    <span className="max-w-md truncate text-xs text-muted-foreground">
+                      {result.finalUrl}
+                    </span>
+                  )
                 )}
               </div>
             </div>
@@ -314,43 +332,145 @@ export default function BdixPage() {
           </div>
 
           {candidates.length > 0 && (
-            <div className="mt-5 flex flex-col gap-2">
-              {candidates.map((c) => {
-                const r = bulkResults[c];
-                return (
-                  <div
-                    key={c}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/5 px-4 py-3"
-                  >
-                    <span className="min-w-0 truncate text-sm">{c}</span>
-                    <div className="flex shrink-0 items-center gap-3 text-xs">
-                      {r === undefined ? null : r === null ? (
-                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                      ) : r.reachable ? (
-                        <>
-                          <span className="text-muted-foreground">{r.timeMs}ms</span>
-                          <span
-                            className={cn(
-                              "font-medium",
-                              r.ok ? "text-emerald-400" : "text-amber-400"
+            <div className="mt-5 flex flex-col gap-6">
+              <div>
+                <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                  All ({candidates.length})
+                </h3>
+                <div className="max-h-72 overflow-y-auto rounded-xl border border-border">
+                  <div className="flex flex-col divide-y divide-border">
+                    {candidates.map((c) => {
+                      const r = bulkResults[c];
+                      return (
+                        <div
+                          key={c}
+                          className="flex items-center justify-between gap-3 bg-muted/5 px-4 py-2.5"
+                        >
+                          {r?.reachable ? (
+                            <a
+                              href={r.finalUrl || c}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="min-w-0 truncate text-sm text-emerald-400 underline-offset-2 hover:underline"
+                            >
+                              {c}
+                            </a>
+                          ) : (
+                            <span className="min-w-0 truncate text-sm">{c}</span>
+                          )}
+                          <div className="flex shrink-0 items-center gap-2 text-xs">
+                            {!r ? (
+                              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                            ) : r.reachable ? (
+                              <CheckCircle2 className="size-4 text-emerald-400" />
+                            ) : (
+                              <XCircle className="size-4 text-red-400" />
                             )}
-                          >
-                            {r.status}
-                          </span>
-                          <CheckCircle2 className="size-4 text-emerald-400" />
-                        </>
-                      ) : (
-                        <>
-                          <span className="max-w-56 truncate text-red-400">
-                            {r.error || "Unreachable"}
-                          </span>
-                          <XCircle className="size-4 text-red-400" />
-                        </>
-                      )}
-                    </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div>
+                  <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-emerald-400">
+                    <CheckCircle2 className="size-4" />
+                    Working ({working.length})
+                  </h3>
+                  <div className="max-h-80 overflow-y-auto rounded-xl border border-emerald-500/20">
+                    <table className="w-full table-fixed border-collapse text-sm">
+                      <colgroup>
+                        <col />
+                        <col className="w-20" />
+                        <col className="w-16" />
+                      </colgroup>
+                      <thead className="sticky top-0">
+                        <tr className="bg-emerald-500/6 text-left text-xs text-muted-foreground backdrop-blur">
+                          <th className="px-4 py-2 font-medium">Website</th>
+                          <th className="px-4 py-2 font-medium">Status</th>
+                          <th className="px-4 py-2 font-medium">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {working.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-4 py-6 text-center text-xs text-muted-foreground">
+                              Nothing yet
+                            </td>
+                          </tr>
+                        ) : (
+                          working.map(([c, r]) => (
+                            <tr key={c} className="border-t border-emerald-500/10">
+                              <td className="truncate px-4 py-2.5">
+                                <a
+                                  href={r.finalUrl || c}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={c}
+                                  className="text-emerald-400 underline-offset-2 hover:underline"
+                                >
+                                  {c}
+                                </a>
+                              </td>
+                              <td className="px-4 py-2.5 text-xs">
+                                <span className={cn("font-medium", r.ok ? "text-emerald-400" : "text-amber-400")}>
+                                  {r.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.timeMs}ms</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-red-400">
+                    <XCircle className="size-4" />
+                    Failed ({failed.length})
+                  </h3>
+                  <div className="max-h-80 overflow-y-auto rounded-xl border border-red-500/20">
+                    <table className="w-full table-fixed border-collapse text-sm">
+                      <colgroup>
+                        <col className="w-1/2" />
+                        <col />
+                        <col className="w-16" />
+                      </colgroup>
+                      <thead className="sticky top-0">
+                        <tr className="bg-red-500/6 text-left text-xs text-muted-foreground backdrop-blur">
+                          <th className="px-4 py-2 font-medium">Website</th>
+                          <th className="px-4 py-2 font-medium">Reason</th>
+                          <th className="px-4 py-2 font-medium">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {failed.length === 0 ? (
+                          <tr>
+                            <td colSpan={3} className="px-4 py-6 text-center text-xs text-muted-foreground">
+                              Nothing yet
+                            </td>
+                          </tr>
+                        ) : (
+                          failed.map(([c, r]) => (
+                            <tr key={c} className="border-t border-red-500/10">
+                              <td className="truncate px-4 py-2.5" title={c}>{c}</td>
+                              <td className="truncate px-4 py-2.5 text-xs text-red-400" title={r.error || "Unreachable"}>
+                                {r.error || "Unreachable"}
+                              </td>
+                              <td className="px-4 py-2.5 text-xs text-muted-foreground">{r.timeMs}ms</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
