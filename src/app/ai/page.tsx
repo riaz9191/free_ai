@@ -58,6 +58,18 @@ const integrations = [
     rank: 1,
   },
   {
+    name: "B.AI Chat",
+    description:
+      "DeepSeek, GLM, Qwen, and Hy3 models behind one free, OpenAI-compatible API key.",
+    icon: MessageSquare,
+    href: "/ai/b-ai",
+    accent: "16, 185, 129",
+    status: "live" as const,
+    category: "chat" as const,
+    limit: "Rate limits unknown — third-party API",
+    rank: 2,
+  },
+  {
     name: "OpenRouter Chat",
     description:
       "Every major model, one API. Live catalog with free-tier models sorted first.",

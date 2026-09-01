@@ -1,0 +1,762 @@
+"use client";
+
+import Link from "next/link";
+import { createPortal } from "react-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Send,
+  Sparkles,
+  KeyRound,
+  Square,
+  Trash2,
+  Copy,
+  Check,
+  SlidersHorizontal,
+  ChevronDown,
+  Search,
+  Star,
+  Zap,
+  Brain,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FloatingInfo } from "@/components/ai/floating-info";
+import { cn } from "@/lib/utils";
+
+const EASE = [0.16, 1, 0.3, 1] as const;
+const DOCS_URL = "https://chat.b.ai/key";
+const STORAGE_KEY = "myai.b-ai.chat";
+const DEFAULT_MODEL = "deepseek-v4-flash";
+
+const FALLBACK_MODELS = [
+  { id: "deepseek-v4-flash", group: "DeepSeek" },
+  { id: "deepseek-v4-flash-vision-exp", group: "DeepSeek" },
+  { id: "hy3", group: "Other" },
+  { id: "glm-5.3-flash", group: "Zhipu AI" },
+  { id: "qwen3.8-flash", group: "Alibaba Cloud" },
+];
+
+const EXCLUDE_PATTERNS: string[] = [];
+
+const LIMITED_FREE_MODELS = new Set([
+  "deepseek-v4-flash",
+  "deepseek-v4-flash-vision-exp",
+  "hy3",
+  "glm-5.3-flash",
+  "qwen3.8-flash",
+]);
+
+function tagFor(id: string): string {
+  return LIMITED_FREE_MODELS.has(id.toLowerCase()) ? "Limited free" : "Free";
+}
+
+const BEST_MODEL = "deepseek-v4-flash";
+const BEST_FAST_MODEL = "qwen3.8-flash";
+
+const SUGGESTED_PROMPTS = [
+  "Explain quantum computing simply",
+  "Write a Python function to reverse a linked list",
+  "Draft a polite email declining a meeting",
+  "What's the fastest way to learn Rust?",
+];
+
+const WELCOME: Message = {
+  role: "assistant",
+  content:
+    "Hi! I'm running on B.AI — DeepSeek V4 Flash, GLM-5.3, Qwen3.8, and Hy3 models, all behind one free API key. Ask me anything, or open **Options** to switch models.",
+};
+
+type Message = { role: "user" | "assistant"; content: string; tokPerSec?: number };
+type ModelOption = { id: string; label: string; tag: string; group: string };
+
+function loadStoredChat(): Message[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function ModelPicker({
+  models,
+  value,
+  onChange,
+  onOpenChange,
+}: {
+  models: ModelOption[];
+  value: string;
+  onChange: (id: string) => void;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [open, setOpenState] = useState(false);
+  const setOpen = (v: boolean | ((prev: boolean) => boolean)) => {
+    setOpenState((prev) => {
+      const next = typeof v === "function" ? v(prev) : v;
+      onOpenChange?.(next);
+      return next;
+    });
+  };
+  const [query, setQuery] = useState("");
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const active = models.find((m) => m.id === value);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(e.target as Node) &&
+        !(e.target as HTMLElement).closest("[data-model-picker-menu]")
+      ) {
+        setOpenState(false);
+        onOpenChange?.(false);
+        setQuery("");
+      }
+    }
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [onOpenChange]);
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+  }, [open]);
+
+  const groups = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const filtered = models.filter((m) => m.id.toLowerCase().includes(q));
+    const byGroup = new Map<string, ModelOption[]>();
+    for (const m of filtered) {
+      const list = byGroup.get(m.group) || [];
+      list.push(m);
+      byGroup.set(m.group, list);
+    }
+    return [...byGroup.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [models, query]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 text-left text-sm outline-none"
+      >
+        <span className="truncate">
+          {active?.label ?? value}
+          {active?.tag ? ` — ${active.tag}` : ""}
+          {value === BEST_MODEL ? " ★" : ""}
+        </span>
+        <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+      </button>
+
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <div
+              aria-hidden
+              className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
+            />
+            <div
+              data-model-picker-menu
+              style={{ top: coords.top, left: coords.left, width: "min(22rem, 80vw)" }}
+              className="fixed z-50 overflow-hidden rounded-xl border border-border bg-background shadow-2xl"
+            >
+              <div className="relative border-b border-border">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search models…"
+                  className="w-full bg-transparent py-2.5 pr-3 pl-9 text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </div>
+              <div className="max-h-72 overflow-y-auto p-1.5">
+                {groups.length === 0 && (
+                  <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                    No matches.
+                  </p>
+                )}
+                {groups.map(([group, items]) => (
+                  <div key={group} className="mb-1 last:mb-0">
+                    <p className="px-2.5 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                      {group}
+                    </p>
+                    {items.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => {
+                          onChange(m.id);
+                          setOpen(false);
+                          setQuery("");
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-muted/40",
+                          m.id === value && "bg-muted/60"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5 truncate">
+                          {(m.id === BEST_MODEL || m.id === BEST_FAST_MODEL) && (
+                            <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" />
+                          )}
+                          <span className="truncate">{m.label}</span>
+                        </span>
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {m.tag}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
+    </div>
+  );
+}
+
+function splitThinking(content: string): {
+  thinking: string | null;
+  answer: string;
+  thinking_streaming: boolean;
+} {
+  const openIdx = content.indexOf("<think>");
+  if (openIdx === -1) return { thinking: null, answer: content, thinking_streaming: false };
+
+  const before = content.slice(0, openIdx);
+  const afterOpen = content.slice(openIdx + "<think>".length);
+  const closeIdx = afterOpen.indexOf("</think>");
+
+  if (closeIdx === -1) {
+    return { thinking: afterOpen, answer: before, thinking_streaming: true };
+  }
+
+  const thinking = afterOpen.slice(0, closeIdx);
+  const after = afterOpen.slice(closeIdx + "</think>".length);
+  return { thinking, answer: (before + after).trim(), thinking_streaming: false };
+}
+
+function ThinkingBlock({ thinking, streaming }: { thinking: string; streaming: boolean }) {
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
+  const open = manualOpen ?? streaming;
+
+  return (
+    <div className="mb-2 rounded-lg border border-border/60 bg-muted/20">
+      <button
+        type="button"
+        onClick={() => setManualOpen(!open)}
+        className="flex w-full items-center gap-1.5 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <Brain className="size-3" />
+        {streaming ? "Thinking…" : "Thoughts"}
+        <ChevronDown
+          className={cn("ml-auto size-3 transition-transform", open && "rotate-180")}
+        />
+      </button>
+      {open && (
+        <p className="max-h-48 overflow-y-auto border-t border-border/60 px-2.5 py-2 text-xs whitespace-pre-wrap text-muted-foreground">
+          {thinking.trim()}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      aria-label="Copy message"
+    >
+      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
+export default function BAiPage() {
+  const [models, setModels] = useState<ModelOption[]>(
+    FALLBACK_MODELS.map((m) => ({ id: m.id, label: m.id, tag: tagFor(m.id), group: m.group }))
+  );
+  const [model, setModel] = useState(DEFAULT_MODEL);
+  const [temperature, setTemperature] = useState(1);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [showOptions, setShowOptions] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([WELCOME]);
+  const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [liveTokPerSec, setLiveTokPerSec] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const stored = loadStoredChat();
+    if (stored) setMessages(stored);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    fetch("/api/ai/b-ai/models")
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) return;
+        const items: ModelOption[] = (data.data || [])
+          .filter((m: { output_modalities?: string[] }) =>
+            !m.output_modalities || m.output_modalities.includes("text")
+          )
+          .map((m: { id: string; owned_by?: string }) => ({
+            id: m.id,
+            label: m.id,
+            tag: tagFor(m.id),
+            group: m.owned_by || "Other",
+          }))
+          .filter(
+            (m: ModelOption) =>
+              !EXCLUDE_PATTERNS.some((p) => m.id.toLowerCase().includes(p))
+          )
+          .sort((a: ModelOption, b: ModelOption) => a.id.localeCompare(b.id));
+        if (items.length) setModels(items);
+      })
+      .catch(() => {
+        // keep fallback list
+      });
+  }, []);
+
+  async function sendMessage() {
+    const text = input.trim();
+    if (!text || isStreaming) return;
+
+    setError(null);
+    const nextMessages: Message[] = [...messages, { role: "user", content: text }];
+    setMessages([...nextMessages, { role: "assistant", content: "" }]);
+    setInput("");
+    setIsStreaming(true);
+    setLiveTokPerSec(null);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const startTime = performance.now();
+
+    try {
+      const res = await fetch("/api/ai/b-ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages.map(({ role, content }) => ({ role, content })),
+          model,
+          temperature,
+          system: systemPrompt,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || `Request failed (${res.status})`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assistantText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+
+        for (const event of events) {
+          const line = event.trim();
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (data === "[DONE]") continue;
+          try {
+            const json = JSON.parse(data);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              assistantText += delta;
+              const elapsedSec = (performance.now() - startTime) / 1000;
+              const tokPerSec =
+                elapsedSec > 0.15
+                  ? Math.round(assistantText.length / 4 / elapsedSec)
+                  : null;
+              if (tokPerSec) setLiveTokPerSec(tokPerSec);
+              setMessages((prev) => {
+                const copy = [...prev];
+                copy[copy.length - 1] = {
+                  role: "assistant",
+                  content: assistantText,
+                  tokPerSec: tokPerSec ?? undefined,
+                };
+                return copy;
+              });
+            }
+          } catch {
+            // ignore malformed SSE chunk
+          }
+        }
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        // stopped by user — keep partial text
+      } else {
+        setError(e instanceof Error ? e.message : "Something went wrong");
+        setMessages((prev) => prev.slice(0, -1));
+      }
+    } finally {
+      setIsStreaming(false);
+      abortRef.current = null;
+    }
+  }
+
+  function stopGenerating() {
+    abortRef.current?.abort();
+  }
+
+  function clearChat() {
+    setMessages([WELCOME]);
+    setError(null);
+    window.localStorage.removeItem(STORAGE_KEY);
+  }
+
+  const activeModel = models.find((m) => m.id === model);
+
+  return (
+    <div className="relative flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-32 left-1/3 size-[28rem] rounded-full bg-orange-600/10 blur-[130px]" />
+        <div className="absolute bottom-0 -right-24 size-[24rem] rounded-full bg-amber-500/10 blur-[130px]" />
+      </div>
+
+      <header className="shrink-0 border-b border-border bg-background/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-3.5">
+          <Link
+            href="/ai"
+            className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" />
+            Back to AI Tools
+          </Link>
+          <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+            <span className="flex size-6 items-center justify-center rounded-md bg-gradient-to-br from-orange-600 to-amber-500">
+              <Sparkles className="size-3.5 text-white" />
+            </span>
+            B.AI Chat
+            {isStreaming && liveTokPerSec ? (
+              <motion.span
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="ml-1 hidden items-center gap-1 text-xs font-normal text-amber-400 sm:flex"
+              >
+                <Zap className="size-3 fill-amber-400" />
+                {liveTokPerSec} tok/s
+              </motion.span>
+            ) : (
+              <span className="ml-1 hidden items-center gap-1.5 text-xs font-normal text-muted-foreground sm:flex">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-green-400" />
+                </span>
+                Connected
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={clearChat}
+              className="flex items-center gap-1.5 rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Trash2 className="size-3.5" />
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowOptions((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs transition-colors",
+                showOptions
+                  ? "bg-foreground text-background"
+                  : "bg-muted/20 text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <SlidersHorizontal className="size-3.5" />
+              Options
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence initial={false}>
+        {showOptions && (
+          <motion.div
+            initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+            animate={{
+              height: "auto",
+              opacity: 1,
+              transitionEnd: { overflow: "visible" },
+            }}
+            exit={{ height: 0, opacity: 0, overflow: "hidden" }}
+            transition={{ duration: 0.25, ease: EASE }}
+            className="border-t border-border bg-background/95"
+          >
+            <div className="px-6 py-4">
+            <div className="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row sm:flex-wrap">
+              <label className="flex flex-1 min-w-[220px] flex-col gap-1.5">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Model
+                </span>
+                <ModelPicker models={models} value={model} onChange={setModel} />
+              </label>
+
+              <label className="flex w-full flex-col gap-1.5 sm:w-48">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Temperature — {temperature.toFixed(1)}
+                </span>
+                <input
+                  type="range"
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  value={temperature}
+                  onChange={(e) => setTemperature(Number(e.target.value))}
+                  className="accent-orange-500"
+                />
+              </label>
+
+              <label className="flex flex-[2] min-w-[260px] flex-col gap-1.5">
+                <span className="text-xs font-medium text-muted-foreground">
+                  System prompt (optional)
+                </span>
+                <input
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                  placeholder="e.g. Answer concisely, like a senior engineer."
+                  className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+            </div>
+            <p className="mx-auto mt-3 max-w-4xl text-xs text-muted-foreground">
+              Models are fetched live from B.AI&rsquo;s catalog.{" "}
+              <strong className="font-medium text-foreground">
+                deepseek-v4-flash
+              </strong>{" "}
+              is the strongest overall model,{" "}
+              <strong className="font-medium text-foreground">
+                qwen3.8-flash
+              </strong>{" "}
+              is the fastest for quick replies.
+            </p>
+            </div>
+          </motion.div>
+        )}
+        </AnimatePresence>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-4xl flex-1 min-h-0 flex-col px-6 py-4">
+        <div className="relative flex-1 min-h-0">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 rounded-t-2xl bg-gradient-to-b from-background/80 to-transparent"
+          />
+          <div
+            ref={scrollRef}
+            className="h-full overflow-y-auto rounded-2xl border border-border bg-muted/[0.07] p-5"
+          >
+          {messages.length === 1 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-5 px-4 text-center">
+              <span className="flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-600 to-amber-500 shadow-lg shadow-orange-500/20">
+                <Sparkles className="size-7 text-white" />
+              </span>
+              <div className="flex flex-col gap-2">
+                <h2 className="text-xl font-semibold tracking-tight">Ask B.AI anything</h2>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  DeepSeek V4 Flash, GLM-5.3, Qwen3.8, and Hy3 models, all
+                  behind one free API key.
+                </p>
+              </div>
+              <div className="flex max-w-lg flex-wrap justify-center gap-2">
+                {SUGGESTED_PROMPTS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setInput(p)}
+                    className="rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-orange-500/30 hover:text-foreground"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+          <div className="flex flex-col gap-3">
+          {messages.map((m, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className={cn(
+                "group max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+                m.role === "user"
+                  ? "ml-auto rounded-tr-sm bg-gradient-to-br from-orange-600 to-amber-500 text-white shadow-sm shadow-orange-500/20"
+                  : "rounded-tl-sm border border-border/60 bg-muted/40 text-foreground shadow-sm"
+              )}
+            >
+              {m.content ? (
+                m.role === "assistant" ? (
+                  (() => {
+                    const { thinking, answer, thinking_streaming } = splitThinking(m.content);
+                    return (
+                      <>
+                        {thinking && (
+                          <ThinkingBlock thinking={thinking} streaming={thinking_streaming} />
+                        )}
+                        {answer && (
+                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-pre:my-2 prose-pre:rounded-lg prose-pre:bg-black/40 prose-code:text-orange-300">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{answer}</ReactMarkdown>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()
+                ) : (
+                  m.content
+                )
+              ) : (
+                <span className="flex gap-1 py-1">
+                  <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
+                  <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
+                  <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground" />
+                </span>
+              )}
+              {m.role === "assistant" && m.content && (
+                <div className="mt-2 flex items-center gap-3">
+                  <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                    <CopyButton text={m.content} />
+                  </div>
+                  {m.tokPerSec && (
+                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                      <Zap className="size-2.5" />
+                      {m.tokPerSec} tok/s
+                    </span>
+                  )}
+                </div>
+              )}
+            </motion.div>
+          ))}
+          </div>
+          )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendMessage();
+          }}
+          className="mt-3 flex shrink-0 items-center gap-2 rounded-full border border-border bg-muted/[0.07] p-1.5 pl-4 transition-colors focus-within:border-orange-500/30"
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={`Ask ${activeModel?.label ?? "B.AI"} anything…`}
+            disabled={isStreaming}
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {isStreaming ? (
+            <Button
+              type="button"
+              size="icon"
+              onClick={stopGenerating}
+              className="rounded-full bg-red-500/15 text-red-400 hover:bg-red-500/25"
+              aria-label="Stop generating"
+            >
+              <Square className="size-3.5 fill-current" />
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!input.trim()}
+              className="rounded-full bg-foreground text-background hover:opacity-90"
+              aria-label="Send message"
+            >
+              <Send className="size-4" />
+            </Button>
+          )}
+        </form>
+      </main>
+
+      <FloatingInfo accentClassName="text-orange-400">
+        <div className="flex flex-col gap-3">
+          <p className="font-medium text-foreground">Run this yourself</p>
+          <ol className="flex flex-col gap-2.5">
+            <li>
+              1. Get a key at{" "}
+              <a href="https://chat.b.ai/key" target="_blank" rel="noopener noreferrer">
+                chat.b.ai/key
+              </a>
+              .
+            </li>
+            <li>
+              2. <KeyRound className="mr-1 inline size-3.5" />
+              Add it to <code>.env.local</code>:
+              <pre>B_AI_API_KEY=sk-xxx</pre>
+            </li>
+            <li>
+              3. Restart <code>npm run dev</code>, then chat. Rate limits for
+              B.AI&apos;s API are unverified — this is a third-party service,
+              use accordingly.
+            </li>
+          </ol>
+          <a
+            href={DOCS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 flex w-fit items-center gap-2 rounded-full border border-border bg-muted/20 px-3 py-1.5 text-xs font-medium"
+          >
+            <Sparkles className="size-3.5" />
+            chat.b.ai/key
+            <ArrowUpRight className="size-3" />
+          </a>
+        </div>
+      </FloatingInfo>
+    </div>
+  );
+}
