@@ -133,6 +133,7 @@ export default function IptvAdminPage() {
   const [playlistUrl, setPlaylistUrl] = useState("");
   const [loadingPlaylist, setLoadingPlaylist] = useState(false);
   const [loadPlaylistError, setLoadPlaylistError] = useState<string | null>(null);
+  const [uploadingPlaylist, setUploadingPlaylist] = useState(false);
 
   const [mode, setMode] = useState<"single" | "bulk">("single");
 
@@ -224,6 +225,24 @@ export default function IptvAdminPage() {
       setLoadPlaylistError(e instanceof Error ? e.message : "Failed to load playlist");
     } finally {
       setLoadingPlaylist(false);
+    }
+  }
+
+  async function uploadPlaylistFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingPlaylist(true);
+    setLoadPlaylistError(null);
+    try {
+      const text = await file.text();
+      setBulkText(text);
+      setBulkResults({});
+      setMode("bulk");
+    } catch (err) {
+      setLoadPlaylistError(err instanceof Error ? err.message : "Failed to read file");
+    } finally {
+      setUploadingPlaylist(false);
     }
   }
 
@@ -589,6 +608,32 @@ export default function IptvAdminPage() {
             </Button>
           </div>
           {loadPlaylistError && <p className="text-xs text-red-400">{loadPlaylistError}</p>}
+
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <label
+            className={cn(
+              "flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:border-purple-500/40 hover:text-foreground",
+              uploadingPlaylist && "pointer-events-none opacity-60"
+            )}
+          >
+            {uploadingPlaylist ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Upload className="size-4" />
+            )}
+            Upload a playlist file (.m3u, .m3u8, .txt)
+            <input
+              type="file"
+              accept=".m3u,.m3u8,.txt,text/plain"
+              onChange={uploadPlaylistFile}
+              className="hidden"
+            />
+          </label>
         </div>
         )}
 

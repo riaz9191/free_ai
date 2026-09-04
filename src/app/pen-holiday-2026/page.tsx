@@ -45,6 +45,24 @@ const NOTES = [
 const TOTAL_DAYS = HOLIDAYS.reduce((sum, h) => sum + h.days, 0);
 const MULTI_DAY = HOLIDAYS.filter((h) => h.days > 1).length;
 
+const MONTHS: Record<string, number> = {
+  Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+  Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+};
+
+function parseHolidayDate(part: string): Date {
+  const [day, mon, year] = part.trim().split("-");
+  return new Date(Number(year), MONTHS[mon], Number(day));
+}
+
+function getEndDate(date: string): Date {
+  const last = date.includes(" to ") ? date.split(" to ")[1] : date;
+  return parseHolidayDate(last);
+}
+
+const TODAY = new Date();
+TODAY.setHours(0, 0, 0, 0);
+
 export default function PenHoliday2026Page() {
   return (
     <div className="relative flex min-h-screen flex-col bg-background text-foreground">
@@ -136,48 +154,72 @@ export default function PenHoliday2026Page() {
                 </tr>
               </thead>
               <tbody>
-                {HOLIDAYS.map((h, i) => (
-                  <tr
-                    key={h.no}
-                    className={cn(
-                      "group transition-colors hover:bg-violet-500/[0.06]",
-                      i % 2 === 0 ? "bg-background" : "bg-muted/[0.15]"
-                    )}
-                  >
-                    <td className="border-t border-border px-5 py-3 font-mono text-xs text-muted-foreground/70 tabular-nums">
-                      {String(h.no).padStart(2, "0")}
-                    </td>
-                    <td className="border-t border-border px-5 py-3 font-medium tabular-nums whitespace-nowrap">
-                      {h.date}
-                    </td>
-                    <td className="border-t border-border px-5 py-3 text-muted-foreground whitespace-nowrap">
-                      {h.day}
-                    </td>
-                    <td className="border-t border-border px-5 py-3">
-                      <span
+                {HOLIDAYS.map((h, i) => {
+                  const isDone = getEndDate(h.date) < TODAY;
+                  return (
+                    <tr
+                      key={h.no}
+                      className={cn(
+                        "group transition-colors hover:bg-violet-500/[0.06]",
+                        i % 2 === 0 ? "bg-background" : "bg-muted/[0.15]",
+                        isDone && "opacity-45"
+                      )}
+                    >
+                      <td className="border-t border-border px-5 py-3 font-mono text-xs text-muted-foreground/70 tabular-nums">
+                        {String(h.no).padStart(2, "0")}
+                      </td>
+                      <td
                         className={cn(
-                          "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap",
-                          h.days > 1
-                            ? "bg-gradient-to-r from-violet-500/15 to-blue-500/15 text-violet-300"
-                            : "bg-muted/40 text-muted-foreground"
+                          "border-t border-border px-5 py-3 font-medium tabular-nums whitespace-nowrap",
+                          isDone && "line-through decoration-muted-foreground/60"
                         )}
                       >
-                        {h.days} {h.days === 1 ? "day" : "days"}
-                      </span>
-                    </td>
-                    <td className="border-t border-border px-5 py-3 font-medium">
-                      <span className="flex items-center gap-1.5">
-                        {h.name}
-                        {h.moon && (
-                          <MoonStar
-                            className="size-3.5 shrink-0 text-muted-foreground/60"
-                            aria-label="Subject to moon sighting"
-                          />
+                        {h.date}
+                      </td>
+                      <td
+                        className={cn(
+                          "border-t border-border px-5 py-3 text-muted-foreground whitespace-nowrap",
+                          isDone && "line-through decoration-muted-foreground/60"
                         )}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      >
+                        {h.day}
+                      </td>
+                      <td className="border-t border-border px-5 py-3">
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap",
+                            h.days > 1
+                              ? "bg-gradient-to-r from-violet-500/15 to-blue-500/15 text-violet-300"
+                              : "bg-muted/40 text-muted-foreground"
+                          )}
+                        >
+                          {h.days} {h.days === 1 ? "day" : "days"}
+                        </span>
+                      </td>
+                      <td
+                        className={cn(
+                          "border-t border-border px-5 py-3 font-medium",
+                          isDone && "line-through decoration-muted-foreground/60"
+                        )}
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {h.name}
+                          {h.moon && (
+                            <MoonStar
+                              className="size-3.5 shrink-0 text-muted-foreground/60"
+                              aria-label="Subject to moon sighting"
+                            />
+                          )}
+                          {isDone && (
+                            <span className="ml-1 rounded-full bg-muted/40 px-2 py-0.5 text-[10px] font-normal text-muted-foreground no-underline">
+                              Done
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

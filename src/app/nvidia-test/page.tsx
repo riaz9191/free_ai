@@ -40,6 +40,7 @@ const FALLBACK_MODELS: ModelOption[] = [
   { id: "nvidia/llama-3.3-nemotron-super-49b-v1", label: "nvidia/llama-3.3-nemotron-super-49b-v1", tag: "Free", group: "NVIDIA" },
   { id: "nvidia/nemotron-mini-4b-instruct", label: "nvidia/nemotron-mini-4b-instruct", tag: "Free", group: "NVIDIA" },
   { id: "nvidia/nvidia-nemotron-nano-9b-v2", label: "nvidia/nvidia-nemotron-nano-9b-v2", tag: "Free", group: "NVIDIA" },
+  { id: "moonshotat/kimi-k3", label: "moonshotat/kimi-k3", tag: "Moonshot AI", group: "NVIDIA" },
   { id: "openai/gpt-oss-120b", label: "openai/gpt-oss-120b", tag: "Free", group: "OpenAI" },
   { id: "openai/gpt-oss-20b", label: "openai/gpt-oss-20b", tag: "Free", group: "OpenAI" },
   { id: "meta/llama-3.1-70b-instruct", label: "meta/llama-3.1-70b-instruct", tag: "Free", group: "Meta" },
