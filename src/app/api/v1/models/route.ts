@@ -17,6 +17,7 @@ const MODEL_IDS = [
   "openai/gpt-oss-20b",
   "meta/llama-3.1-70b-instruct",
   "mistralai/mistral-nemotron",
+  "moonshotat/kimi-k3",
 ];
 
 function isAuthorized(req: NextRequest): boolean {
