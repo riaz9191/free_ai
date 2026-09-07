@@ -5,6 +5,13 @@ export const runtime = "nodejs";
 const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b";
 
+// Some NVIDIA-hosted models reject any top_p other than a fixed value.
+const IMMUTABLE_TOP_P_MODELS: Record<string, number> = {
+  "nvidia/nemotron-3-nano-30b-a3b": 0.95,
+  "nvidia/nemotron-3-super-120b-a12b": 0.95,
+  "moonshotai/kimi-k3": 0.95,
+};
+
 function isAuthorized(req: NextRequest): boolean {
   const required = process.env.MYAI_ACCESS_CODE;
   if (!required) return true;
@@ -51,6 +58,9 @@ export async function POST(req: NextRequest) {
 
   const wantsStream = body.stream !== false;
 
+  const model = (body.model as string) || DEFAULT_MODEL;
+  const fixedTopP = IMMUTABLE_TOP_P_MODELS[model];
+
   const upstream = await fetch(NVIDIA_URL, {
     method: "POST",
     headers: {
@@ -59,8 +69,9 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify({
       ...body,
-      model: (body.model as string) || DEFAULT_MODEL,
+      model,
       stream: wantsStream,
+      ...(fixedTopP !== undefined ? { top_p: fixedTopP } : {}),
     }),
     signal: req.signal,
   });
