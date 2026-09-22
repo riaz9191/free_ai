@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { Barlow } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const barlow = Barlow({
+const geist = Geist({
   variable: "--font-sans",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${barlow.variable} antialiased font-sans`}>
+      <body className={`${geist.variable} antialiased font-sans`}>
         <Providers>{children}</Providers>
       </body>
     </html>
