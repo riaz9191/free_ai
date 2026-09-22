@@ -1,13 +1,21 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo } from "react";
 import { NavBar } from "@/components/nav-bar";
 import { FocusTimer } from "@/components/focus-timer";
 import { Button } from "@/components/ui/button";
-import { Check, RotateCcw, Moon, Target, Clock } from "lucide-react";
+import {
+  Check,
+  RotateCcw,
+  Moon,
+  Target,
+  Clock,
+  Cloud,
+  CloudOff,
+  RefreshCw,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const STORAGE_KEY = "ai-ml-routine-progress-v1";
+import { useRoutine, type SyncStatus } from "@/lib/routine-sync";
 
 type Task = {
   id: string;
@@ -124,55 +132,6 @@ const TARGETS = [
   { date: "2 Oct", target: "পুরো Python + Intro to ML Complete", taskIds: ["p03"] },
 ];
 
-type Progress = Record<string, string>; // task id -> ISO completion timestamp
-
-// localStorage lives outside React, so it is read through a tiny external store.
-// `getServerSnapshot` returns null, which keeps the server HTML and the
-// hydration render identical; the real ticks appear on the first client render.
-const listeners = new Set<() => void>();
-let cachedRaw: string | null = null;
-let cachedProgress: Progress = {};
-
-function subscribe(onChange: () => void) {
-  listeners.add(onChange);
-  window.addEventListener("storage", onChange);
-  return () => {
-    listeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
-  };
-}
-
-function getSnapshot(): Progress {
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(STORAGE_KEY);
-  } catch {
-    // storage blocked (private mode, blocked cookies) — behave as if empty
-  }
-  if (raw !== cachedRaw) {
-    cachedRaw = raw;
-    try {
-      cachedProgress = raw ? (JSON.parse(raw) as Progress) : {};
-    } catch {
-      cachedProgress = {};
-    }
-  }
-  return cachedProgress;
-}
-
-function getServerSnapshot(): Progress | null {
-  return null;
-}
-
-function writeProgress(next: Progress) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // storage full or blocked — nothing persists, but the UI stays honest
-  }
-  listeners.forEach((fn) => fn());
-}
-
 function formatStamp(iso: string) {
   const d = new Date(iso);
   return d.toLocaleString("en-GB", {
@@ -184,20 +143,45 @@ function formatStamp(iso: string) {
   });
 }
 
+function SyncBadge({ status }: { status: SyncStatus }) {
+  if (status === "offline") {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+        <CloudOff className="size-3.5" />
+        Offline — এই device-এ সেভ আছে
+      </span>
+    );
+  }
+  if (status === "saving" || status === "loading") {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <RefreshCw className="size-3.5 animate-spin" />
+        Syncing…
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+      <Cloud className="size-3.5" />
+      সব device-এ সেভ
+    </span>
+  );
+}
+
 export default function MlRoutinePage() {
-  const stored = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const mounted = stored !== null;
-  const progress = useMemo(() => stored ?? {}, [stored]);
+  const { doc, status, setProgress } = useRoutine();
+  const mounted = doc !== null;
+  const progress = useMemo(() => doc?.progress ?? {}, [doc]);
 
   function toggle(id: string) {
     const next = { ...progress };
     if (next[id]) delete next[id];
     else next[id] = new Date().toISOString();
-    writeProgress(next);
+    setProgress(next);
   }
 
   function resetAll() {
-    if (confirm("সব tick মুছে যাবে। নিশ্চিত?")) writeProgress({});
+    if (confirm("সব tick মুছে যাবে। নিশ্চিত?")) setProgress({});
   }
 
   const doneCount = useMemo(
@@ -228,7 +212,10 @@ export default function MlRoutinePage() {
         <section className="mb-8 rounded-xl border border-border bg-card p-5">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-muted-foreground">Progress</p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-muted-foreground">Progress</p>
+                {mounted && <SyncBadge status={status} />}
+              </div>
               <p className="text-2xl font-semibold tabular-nums">
                 {mounted ? doneCount : 0}
                 <span className="text-muted-foreground"> / {TASKS.length}</span>

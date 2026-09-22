@@ -4,9 +4,10 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import { Button } from "@/components/ui/button";
 import { Bell, BellOff, Pause, Play, RotateCcw, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRoutine, type LogEntry } from "@/lib/routine-sync";
 
+// The running countdown stays on this device; only the finished-session log syncs.
 const TIMER_KEY = "ai-ml-focus-timer-v1";
-const LOG_KEY = "ai-ml-focus-log-v1";
 
 const PRESETS = [
   { label: "30 min", ms: 30 * 60_000 },
@@ -23,7 +24,6 @@ type TimerState =
   | { status: "running"; duration: number; endsAt: number }
   | { status: "paused"; duration: number; remaining: number };
 
-type LogEntry = { at: string; minutes: number };
 
 /**
  * localStorage is outside React, so it is read through an external store:
@@ -80,7 +80,6 @@ const timerStore = makeStore<TimerState>(TIMER_KEY, {
   status: "idle",
   duration: DEFAULT_MS,
 });
-const logStore = makeStore<LogEntry[]>(LOG_KEY, []);
 
 function fmt(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -133,7 +132,7 @@ export function FocusTimer() {
     timerStore.get,
     timerStore.server,
   );
-  const log = useSyncExternalStore(logStore.subscribe, logStore.get, logStore.server);
+  const { doc, addLogEntry } = useRoutine();
   const [now, setNow] = useState(() => Date.now());
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
     () => (typeof Notification === "undefined" ? "unsupported" : Notification.permission),
@@ -169,7 +168,7 @@ export function FocusTimer() {
         at: new Date().toISOString(),
         minutes: Math.round(finished.duration / 60_000),
       };
-      logStore.set([entry, ...logStore.get()].slice(0, 200));
+      addLogEntry(entry);
       update({ status: "idle", duration: finished.duration });
 
       chime();
@@ -180,7 +179,7 @@ export function FocusTimer() {
         });
       }
     },
-    [update],
+    [update, addLogEntry],
   );
 
   // Fire once per deadline, including when the tab was closed and reopened later.
@@ -237,7 +236,7 @@ export function FocusTimer() {
     update({ status: "idle", duration: ms });
   }
 
-  const todayLog = (log ?? []).filter((e) => isToday(e.at));
+  const todayLog = (doc?.log ?? []).filter((e) => isToday(e.at));
   const todayMs = todayLog.reduce((sum, e) => sum + e.minutes * 60_000, 0);
   const todayPct = Math.min(100, Math.round((todayMs / DAILY_GOAL_MS) * 100));
   const elapsedPct = Math.min(
