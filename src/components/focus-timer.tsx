@@ -25,33 +25,62 @@ type TimerState =
 
 type LogEntry = { at: string; minutes: number };
 
-function loadTimer(): TimerState {
-  try {
-    const raw = localStorage.getItem(TIMER_KEY);
-    if (raw) return JSON.parse(raw) as TimerState;
-  } catch {
-    // unreadable storage — fall through to a fresh timer
+/**
+ * localStorage is outside React, so it is read through an external store:
+ * `server()` returns null, which keeps the server HTML and the hydration render
+ * identical, and the saved timer appears on the first client render.
+ */
+function makeStore<T>(key: string, fallback: T) {
+  const listeners = new Set<() => void>();
+  let value: T | undefined;
+
+  function read(): T {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) return JSON.parse(raw) as T;
+    } catch {
+      // unreadable or blocked storage — fall back to a fresh value
+    }
+    return fallback;
   }
-  return { status: "idle", duration: DEFAULT_MS };
+
+  return {
+    subscribe(onChange: () => void) {
+      const onStorage = () => {
+        value = read();
+        onChange();
+      };
+      listeners.add(onChange);
+      window.addEventListener("storage", onStorage);
+      return () => {
+        listeners.delete(onChange);
+        window.removeEventListener("storage", onStorage);
+      };
+    },
+    get(): T {
+      if (value === undefined) value = read();
+      return value;
+    },
+    server(): null {
+      return null;
+    },
+    set(next: T) {
+      value = next;
+      try {
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        // storage full or blocked — the session still runs, it just won't survive a reload
+      }
+      listeners.forEach((fn) => fn());
+    },
+  };
 }
 
-function loadLog(): LogEntry[] {
-  try {
-    const raw = localStorage.getItem(LOG_KEY);
-    if (raw) return JSON.parse(raw) as LogEntry[];
-  } catch {
-    // unreadable storage — start with an empty log
-  }
-  return [];
-}
-
-function save(key: string, value: unknown) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // storage blocked or full — the session still works, it just won't survive a reload
-  }
-}
+const timerStore = makeStore<TimerState>(TIMER_KEY, {
+  status: "idle",
+  duration: DEFAULT_MS,
+});
+const logStore = makeStore<LogEntry[]>(LOG_KEY, []);
 
 function fmt(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -98,21 +127,19 @@ function chime() {
 }
 
 export function FocusTimer() {
-  const [timer, setTimer] = useState<TimerState | null>(null); // null until mounted
-  const [log, setLog] = useState<LogEntry[]>([]);
+  // null until mounted, so the server HTML and the hydration render match.
+  const timer = useSyncExternalStore(
+    timerStore.subscribe,
+    timerStore.get,
+    timerStore.server,
+  );
+  const log = useSyncExternalStore(logStore.subscribe, logStore.get, logStore.server);
   const [now, setNow] = useState(() => Date.now());
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
-    "default",
+    () => (typeof Notification === "undefined" ? "unsupported" : Notification.permission),
   );
   const firedFor = useRef<number | null>(null);
-
-  useEffect(() => {
-    setTimer(loadTimer());
-    setLog(loadLog());
-    setPermission(
-      typeof Notification === "undefined" ? "unsupported" : Notification.permission,
-    );
-  }, []);
+  const mounted = timer !== null;
 
   // One ticker drives the display; remaining time is always derived from the
   // absolute deadline, so a throttled background tab can't drift.
@@ -122,10 +149,7 @@ export function FocusTimer() {
     return () => clearInterval(id);
   }, [timer?.status]);
 
-  const update = useCallback((next: TimerState) => {
-    setTimer(next);
-    save(TIMER_KEY, next);
-  }, []);
+  const update = useCallback((next: TimerState) => timerStore.set(next), []);
 
   const remaining =
     timer == null
@@ -145,9 +169,7 @@ export function FocusTimer() {
         at: new Date().toISOString(),
         minutes: Math.round(finished.duration / 60_000),
       };
-      const nextLog = [entry, ...loadLog()].slice(0, 200);
-      setLog(nextLog);
-      save(LOG_KEY, nextLog);
+      logStore.set([entry, ...logStore.get()].slice(0, 200));
       update({ status: "idle", duration: finished.duration });
 
       chime();
@@ -215,16 +237,15 @@ export function FocusTimer() {
     update({ status: "idle", duration: ms });
   }
 
-  const todayMs = log
-    .filter((e) => isToday(e.at))
-    .reduce((sum, e) => sum + e.minutes * 60_000, 0);
+  const todayLog = (log ?? []).filter((e) => isToday(e.at));
+  const todayMs = todayLog.reduce((sum, e) => sum + e.minutes * 60_000, 0);
   const todayPct = Math.min(100, Math.round((todayMs / DAILY_GOAL_MS) * 100));
   const elapsedPct = Math.min(
     100,
     Math.max(0, Math.round(((duration - remaining) / duration) * 100)),
   );
 
-  const lastToday = log.find((e) => isToday(e.at));
+  const lastToday = todayLog[0];
 
   return (
     <section className="mb-10 rounded-xl border border-border bg-card p-5">
@@ -233,7 +254,7 @@ export function FocusTimer() {
           <Timer className="size-4.5" />
           Focus Timer
         </h2>
-        {permission === "granted" ? (
+        {!mounted ? null : permission === "granted" ? (
           <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
             <Bell className="size-3.5" />
             Notification on
