@@ -38,7 +38,7 @@ export function LessonToc({ items }: { items: TocItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <aside className="hidden shrink-0 lg:block lg:w-82">
+    <aside className="hidden shrink-0 lg:block lg:w-62">
       <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
         <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           এই পেজে
@@ -54,7 +54,7 @@ export function LessonToc({ items }: { items: TocItem[] }) {
                 jumpTo(item.id);
               }}
               className={cn(
-                "-ml-px block truncate border-l-2 py-1 pl-3 text-[13px] leading-snug transition-colors",
+                "-ml-px block truncate border-l-2 py-1 pl-3 text-sm leading-snug transition-colors",
                 activeId === item.id
                   ? "border-foreground font-medium text-foreground"
                   : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",

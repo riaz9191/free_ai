@@ -92,7 +92,7 @@ export default async function LessonPage({
           )}
         </div>
 
-        <div className="prose prose-sm dark:prose-invert mt-6 max-w-none prose-headings:font-semibold prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-pre:bg-muted prose-pre:text-foreground prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none">
+        <div className="prose dark:prose-invert mt-6 max-w-none prose-headings:font-semibold prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-pre:bg-muted prose-pre:text-foreground prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents()}>
             {content}
           </ReactMarkdown>
