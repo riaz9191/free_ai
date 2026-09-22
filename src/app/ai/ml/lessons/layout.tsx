@@ -8,7 +8,7 @@ export default function LessonsLayout({ children }: { children: React.ReactNode 
     <div className="min-h-screen bg-background">
       <NavBar />
 
-      <div className="mx-auto flex max-w-6xl gap-8 px-6 py-10">
+      <div className="mx-auto flex max-w-[1520px] gap-8 px-6 py-10">
         <aside className="hidden w-56 shrink-0 lg:block">
           <div className="sticky top-20">
             <Link
