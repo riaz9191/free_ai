@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { NavBar } from "@/components/nav-bar";
 import { FocusTimer } from "@/components/focus-timer";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import {
   Cloud,
   CloudOff,
   RefreshCw,
+  NotebookText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRoutine, type SyncStatus } from "@/lib/routine-sync";
@@ -196,12 +198,23 @@ export default function MlRoutinePage() {
 
       <main className="mx-auto max-w-4xl px-6 py-10">
         <header className="mb-8">
-          <p className="text-sm font-medium text-muted-foreground">
-            Job 1 PM–10 PM · Morning study plan
-          </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
-            AI / ML Routine
-          </h1>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">
+                Job 1 PM–10 PM · Morning study plan
+              </p>
+              <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">
+                AI / ML Routine
+              </h1>
+            </div>
+            <Link
+              href="/ai/ml/lessons"
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
+            >
+              <NotebookText className="size-4" />
+              Lesson Notes
+            </Link>
+          </div>
           <p className="mt-2 text-[15px] text-muted-foreground">
             ২১ সেপ্টেম্বর থেকে ২ অক্টোবর — Math, Statistics, Python এবং Intro to ML.
             প্রতিটা module শেষ করে tick দাও, পাশে শেষ করার সময় বসে যাবে।
