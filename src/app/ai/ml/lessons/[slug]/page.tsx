@@ -4,7 +4,7 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { NotebookText } from "lucide-react";
 import { LessonMobileNav } from "@/components/lesson-mobile-nav";
-import { LessonToc } from "@/components/lesson-toc";
+import { LessonToc, LessonTocMobile } from "@/components/lesson-toc";
 import { LESSONS, getLesson } from "@/data/lessons";
 import { getLessonContent, hasAltContent } from "@/lib/lessons-content";
 import { extractToc } from "@/lib/toc";
@@ -91,6 +91,8 @@ export default async function LessonPage({
             </div>
           )}
         </div>
+
+        <LessonTocMobile items={toc} />
 
         <div className="prose dark:prose-invert mt-6 max-w-none prose-headings:font-semibold prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-pre:bg-muted prose-pre:text-foreground prose-code:text-foreground prose-code:before:content-none prose-code:after:content-none">
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents()}>
