@@ -1,5 +1,7 @@
 *Bangla + English mixed notes.* — **1 hr 22 min | 8 Units**
 
+> 📓 **Class notebook:** `module-02-control-flow.ipynb` — [👁️ View](/ai/ml/notebooks/module-02-control-flow) / [⬇️ Download](/notebooks/module-02-control-flow.ipynb)
+
 > এই module-এর focus হলো program-কে **decision নিতে এবং repeat করতে শেখানো**। আগে concept বুঝবে, তারপর code practice করবে।
 
 ## Roadmap

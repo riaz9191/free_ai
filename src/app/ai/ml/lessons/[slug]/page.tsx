@@ -30,6 +30,15 @@ function createMarkdownComponents(): Components {
         </h2>
       );
     },
+    // Notebook/dataset links download the file instead of opening raw JSON/CSV.
+    a({ href, children, ...rest }) {
+      const isDownload = /\.(ipynb|csv)$/i.test(href ?? "");
+      return (
+        <a href={href} download={isDownload || undefined} {...rest}>
+          {children}
+        </a>
+      );
+    },
   };
 }
 

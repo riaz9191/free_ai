@@ -1,5 +1,7 @@
 *Bangla + English mixed notes.* — **2 hr 15 min | 12 Units**
 
+> 📓 **Class notebook:** `module-03-string.ipynb` — [👁️ View](/ai/ml/notebooks/module-03-string) / [⬇️ Download](/notebooks/module-03-string.ipynb) · `module-03-list.ipynb` — [👁️ View](/ai/ml/notebooks/module-03-list) / [⬇️ Download](/notebooks/module-03-list.ipynb)
+
 > এই module-এ Python-এর **String এবং List** খুব ভালোভাবে বুঝব। এগুলো real-world data handle করার জন্য extremely important।
 
 ## Roadmap

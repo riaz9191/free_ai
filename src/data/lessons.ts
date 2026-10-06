@@ -90,6 +90,56 @@ export const LESSONS: Lesson[] = [
     routineTaskId: "p03",
   },
   {
+    slug: "python-notebooks",
+    title: "📓 Notebooks & Datasets",
+    category: "Python",
+  },
+  {
+    slug: "functions",
+    title: "Functions, Lambda & map/filter/reduce",
+    category: "Python",
+  },
+  {
+    slug: "file-handling-exceptions",
+    title: "File Handling & Exceptions",
+    category: "Python",
+  },
+  {
+    slug: "oop",
+    title: "OOP — Class & Object",
+    category: "Python",
+  },
+  {
+    slug: "numpy-basics",
+    title: "NumPy Basics",
+    category: "Python",
+  },
+  {
+    slug: "numpy-operations",
+    title: "NumPy Operations",
+    category: "Python",
+  },
+  {
+    slug: "pandas-basics",
+    title: "Pandas Basics",
+    category: "Python",
+  },
+  {
+    slug: "pandas-data-cleaning",
+    title: "Pandas Data Cleaning & Groupby",
+    category: "Python",
+  },
+  {
+    slug: "matplotlib",
+    title: "Matplotlib Visualization",
+    category: "Python",
+  },
+  {
+    slug: "seaborn-plotly",
+    title: "Seaborn & Plotly",
+    category: "Python",
+  },
+  {
     slug: "intro-to-ml",
     title: "Intro to ML",
     category: "Intro to ML",

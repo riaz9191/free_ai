@@ -1,5 +1,7 @@
 *Bangla + English mixed notes.* — **1 hr 15 min | 7 Units**
 
+> 📓 **Class notebook:** `module-01-python-basics.ipynb` — [👁️ View](/ai/ml/notebooks/module-01-python-basics) / [⬇️ Download](/notebooks/module-01-python-basics.ipynb)
+
 > এই note-টা beginner-friendly করে বানানো। আগে concept বুঝবে, তারপর code practice করবে। মুখস্থ করার দরকার নেই।
 
 ## Roadmap

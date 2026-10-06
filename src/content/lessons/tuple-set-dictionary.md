@@ -1,5 +1,7 @@
 *Bangla + English mixed notes.* — **1 hr 36 min | 11 Units**
 
+> 📓 **Class notebook:** `module-05-tuple-set-dictionary.ipynb` — [👁️ View](/ai/ml/notebooks/module-05-tuple-set-dictionary) / [⬇️ Download](/notebooks/module-05-tuple-set-dictionary.ipynb)
+
 > এই module-এ Python-এর important built-in data structures শিখব: **Tuple, Set, Dictionary**। এগুলো data organize, search এবং process করার জন্য খুব useful।
 
 ## Roadmap
