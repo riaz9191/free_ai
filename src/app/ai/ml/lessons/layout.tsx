@@ -12,7 +12,7 @@ export default function LessonsLayout({ children }: { children: React.ReactNode 
         <aside className="hidden w-56 shrink-0 lg:block">
           {/* Own scroll area: the lesson list is taller than the viewport, so it
               must scroll independently of the page instead of riding along with it. */}
-          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain scrollbar-none [&::-webkit-scrollbar]:hidden">
             <Link
               href="/ai/ml"
               className="mb-4 flex items-center gap-1.5 px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
