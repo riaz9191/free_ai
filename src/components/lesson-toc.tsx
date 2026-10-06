@@ -42,7 +42,7 @@ export function LessonToc({ items }: { items: TocItem[] }) {
 
   return (
     <aside className="hidden shrink-0 lg:block lg:w-62">
-      <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
+      <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           এই পেজে
         </p>

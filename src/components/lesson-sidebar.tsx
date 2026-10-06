@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen } from "lucide-react";
@@ -8,9 +9,18 @@ import { cn } from "@/lib/utils";
 
 export function LessonSidebar() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+
+  // The sidebar scrolls on its own, so bring the current lesson into view
+  // (e.g. a Python lesson near the bottom of the list).
+  useEffect(() => {
+    navRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: "nearest" });
+  }, [pathname]);
 
   return (
-    <nav className="space-y-6">
+    <nav ref={navRef} className="space-y-6">
       {LESSON_CATEGORIES.map((category) => {
         const items = LESSONS.filter((l) => l.category === category);
         if (items.length === 0) return null;
@@ -28,6 +38,7 @@ export function LessonSidebar() {
                   <li key={lesson.slug}>
                     <Link
                       href={href}
+                      aria-current={active ? "page" : undefined}
                       className={cn(
                         "flex items-center gap-2 rounded-lg px-2 py-1.5 text-[15px] transition-colors",
                         active
