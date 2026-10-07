@@ -3,8 +3,8 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen } from "lucide-react";
 import { LESSONS, LESSON_CATEGORIES } from "@/data/lessons";
+import { CATEGORY_STYLE } from "@/lib/lesson-style";
 import { cn } from "@/lib/utils";
 
 export function LessonSidebar() {
@@ -24,13 +24,15 @@ export function LessonSidebar() {
       {LESSON_CATEGORIES.map((category) => {
         const items = LESSONS.filter((l) => l.category === category);
         if (items.length === 0) return null;
+        const style = CATEGORY_STYLE[category];
 
         return (
           <div key={category}>
-            <p className="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className={cn("mb-2 flex items-center gap-2 px-2 text-sm font-semibold", style.text)}>
+              <span className={cn("size-1.5 rounded-full", style.dot)} />
               {category}
             </p>
-            <ul className="space-y-0.5">
+            <ul className="ml-2.5 space-y-0.5 border-l border-border">
               {items.map((lesson) => {
                 const href = `/ai/ml/lessons/${lesson.slug}`;
                 const active = pathname === href;
@@ -40,14 +42,13 @@ export function LessonSidebar() {
                       href={href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex items-center gap-2 rounded-lg px-2 py-1.5 text-[15px] transition-colors",
+                        "-ml-px block truncate border-l-2 py-1.5 pl-3 pr-2 text-[15px] transition-colors",
                         active
-                          ? "bg-accent font-medium text-accent-foreground"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                          ? cn(style.border, "font-medium text-foreground")
+                          : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
                       )}
                     >
-                      <BookOpen className="size-3.5 shrink-0" />
-                      <span className="truncate">{lesson.title}</span>
+                      {lesson.title}
                     </Link>
                   </li>
                 );
