@@ -36,16 +36,14 @@ function jumpTo(id: string, setActiveId: (id: string) => void) {
 }
 
 /** Sticky right-rail outline — desktop only. */
-export function LessonToc({ items }: { items: TocItem[] }) {
+export function LessonToc({ items, accent }: { items: TocItem[]; accent?: string }) {
   const [activeId, setActiveId] = useActiveSection(items);
   if (items.length === 0) return null;
 
   return (
     <aside className="hidden shrink-0 lg:block lg:w-62">
       <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto overscroll-contain scrollbar-none [&::-webkit-scrollbar]:hidden">
-        <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          এই পেজে
-        </p>
+        <p className="mb-3 px-3 text-sm font-semibold">এই পেজে</p>
         <nav className="space-y-0.5 border-l border-border">
           {items.map((item) => (
             <a
@@ -59,7 +57,7 @@ export function LessonToc({ items }: { items: TocItem[] }) {
               className={cn(
                 "-ml-px block truncate border-l-2 py-1 pl-3 text-sm leading-snug transition-colors",
                 activeId === item.id
-                  ? "border-foreground font-medium text-foreground"
+                  ? cn(accent ?? "border-foreground", "font-medium text-foreground")
                   : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
               )}
             >
