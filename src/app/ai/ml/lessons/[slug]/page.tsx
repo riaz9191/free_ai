@@ -5,11 +5,13 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ArrowLeft, ArrowRight, BookOpenText, Clock, ListTree } from "lucide-react";
 import { CodeBlock } from "@/components/code-block";
+import { LessonListen } from "@/components/lesson-listen";
 import { LessonMobileNav } from "@/components/lesson-mobile-nav";
 import { LessonToc, LessonTocMobile } from "@/components/lesson-toc";
 import { ReadingProgress } from "@/components/reading-progress";
 import { LESSONS, getLesson } from "@/data/lessons";
 import { EMPTY_LESSON_NOTE, getLessonContent, hasAltContent } from "@/lib/lessons-content";
+import { buildSpeechChunks } from "@/lib/lesson-speech";
 import { CATEGORY_STYLE } from "@/lib/lesson-style";
 import { extractToc } from "@/lib/toc";
 import { cn } from "@/lib/utils";
@@ -123,6 +125,14 @@ export default async function LessonPage({
   const ready = content !== EMPTY_LESSON_NOTE;
   const words = content.split(/\s+/).filter(Boolean).length;
   const minutes = Math.max(1, Math.round(words / 200));
+  // Only ids/titles/hashes go to the client; the route rebuilds the text itself.
+  const listenChunks = ready
+    ? buildSpeechChunks(content, lesson.title).map(({ sectionId, sectionTitle, hash }) => ({
+        sectionId,
+        sectionTitle,
+        hash,
+      }))
+    : [];
 
   return (
     <div className="flex gap-10">
@@ -177,32 +187,43 @@ export default async function LessonPage({
                 )}
               </div>
 
-              {alt && (
-                <div className="flex rounded-full border border-border bg-background p-1 text-sm">
-                  <Link
-                    href={`/ai/ml/lessons/${slug}`}
-                    className={cn(
-                      "rounded-full px-3.5 py-1.5 transition-colors",
-                      !showAlt
-                        ? "bg-foreground font-medium text-background"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    Version 1
-                  </Link>
-                  <Link
-                    href={`/ai/ml/lessons/${slug}?v=alt`}
-                    className={cn(
-                      "rounded-full px-3.5 py-1.5 transition-colors",
-                      showAlt
-                        ? "bg-foreground font-medium text-background"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    Version 2
-                  </Link>
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-3">
+                {ready && (
+                  <LessonListen
+                    key={`${slug}-${showAlt && alt ? "alt" : "main"}`}
+                    slug={slug}
+                    variant={showAlt && alt ? "alt" : undefined}
+                    chunks={listenChunks}
+                    accentText={style.text}
+                  />
+                )}
+                {alt && (
+                  <div className="flex rounded-full border border-border bg-background p-1 text-sm">
+                    <Link
+                      href={`/ai/ml/lessons/${slug}`}
+                      className={cn(
+                        "rounded-full px-3.5 py-1.5 transition-colors",
+                        !showAlt
+                          ? "bg-foreground font-medium text-background"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      Version 1
+                    </Link>
+                    <Link
+                      href={`/ai/ml/lessons/${slug}?v=alt`}
+                      className={cn(
+                        "rounded-full px-3.5 py-1.5 transition-colors",
+                        showAlt
+                          ? "bg-foreground font-medium text-background"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      Version 2
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
