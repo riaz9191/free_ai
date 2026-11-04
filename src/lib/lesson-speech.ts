@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { CODE_KEY, CONT_KEY, speechKey } from "@/lib/speech-key";
 
 /**
  * Turns a lesson's markdown into speakable chunks for the "listen" player.
@@ -20,6 +21,12 @@ export type SpeechChunk = {
   text: string;
   /** Content hash — changes when the notes or voice change, busting caches. */
   hash: string;
+  /**
+   * One entry per spoken paragraph, for highlighting: `k` matches the
+   * rendered block (see speech-key.ts), `n` is its length in characters,
+   * used to estimate when it is being read.
+   */
+  paras: { k: string; n: number }[];
 };
 
 const MAX_CHARS = 1800;
@@ -133,12 +140,6 @@ function toSections(markdown: string, lessonTitle: string): RawSection[] {
   }
   flush();
 
-  // Collapse runs of back-to-back code notes into one.
-  for (const s of sections) {
-    s.paragraphs = s.paragraphs.filter(
-      (p, i, arr) => !(p === CODE_NOTE && arr[i - 1] === CODE_NOTE),
-    );
-  }
   return sections.filter((s) => s.paragraphs.some((p) => p !== CODE_NOTE) || s.id);
 }
 
@@ -164,24 +165,28 @@ function splitLong(paragraph: string): string[] {
 export function buildSpeechChunks(markdown: string, lessonTitle: string): SpeechChunk[] {
   const chunks: SpeechChunk[] = [];
   for (const section of toSections(markdown, lessonTitle)) {
-    let buf: string[] = [];
+    let buf: { text: string; k: string }[] = [];
     let len = 0;
     const push = () => {
       if (!buf.length) return;
-      const text = buf.join("\n");
+      const text = buf.map((p) => p.text).join("\n");
       chunks.push({
         sectionId: section.id,
         sectionTitle: section.title,
         text,
         hash: crypto.createHash("sha1").update(text).digest("hex").slice(0, 12),
+        paras: buf.map((p) => ({ k: p.k, n: p.text.length })),
       });
       buf = [];
       len = 0;
     };
-    for (const p of section.paragraphs.flatMap(splitLong)) {
-      if (len && len + p.length > MAX_CHARS) push();
-      buf.push(p);
-      len += p.length + 1;
+    for (const paragraph of section.paragraphs) {
+      splitLong(paragraph).forEach((part, i) => {
+        if (len && len + part.length > MAX_CHARS) push();
+        const k = i > 0 ? CONT_KEY : paragraph === CODE_NOTE ? CODE_KEY : speechKey(part);
+        buf.push({ text: part, k });
+        len += part.length + 1;
+      });
     }
     push();
   }

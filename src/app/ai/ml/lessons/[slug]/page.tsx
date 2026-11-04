@@ -127,10 +127,11 @@ export default async function LessonPage({
   const minutes = Math.max(1, Math.round(words / 200));
   // Only ids/titles/hashes go to the client; the route rebuilds the text itself.
   const listenChunks = ready
-    ? buildSpeechChunks(content, lesson.title).map(({ sectionId, sectionTitle, hash }) => ({
+    ? buildSpeechChunks(content, lesson.title).map(({ sectionId, sectionTitle, hash, paras }) => ({
         sectionId,
         sectionTitle,
         hash,
+        paras,
       }))
     : [];
 
@@ -230,7 +231,7 @@ export default async function LessonPage({
 
         <LessonTocMobile items={toc} />
 
-        <article className={cn(PROSE, "mt-10")}>
+        <article data-lesson-article className={cn(PROSE, "mt-10")}>
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMarkdownComponents(style)}>
             {content}
           </ReactMarkdown>

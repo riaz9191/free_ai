@@ -10,13 +10,82 @@ import {
   SkipForward,
   X,
 } from "lucide-react";
+import { CHARS_PER_SECOND, CODE_KEY, CONT_KEY, speechKey } from "@/lib/speech-key";
 import { cn } from "@/lib/utils";
 
-export type ListenChunk = { sectionId: string | null; sectionTitle: string; hash: string };
+export type ListenChunk = {
+  sectionId: string | null;
+  sectionTitle: string;
+  hash: string;
+  paras: { k: string; n: number }[];
+};
 type Voice = "female" | "male";
 
 const RATES = [0.75, 1, 1.25, 1.5, 1.75, 2];
 const PREFS_KEY = "lesson-listen-prefs";
+
+const BLOCK_SELECTOR = "p, li, h3, h4, h5, h6, tr, pre";
+const HIGHLIGHT = [
+  "rounded-md",
+  "bg-amber-300/25",
+  "shadow-[0_0_0_6px_rgb(252_211_77/0.25)]",
+  "transition-[background-color,box-shadow]",
+  "duration-300",
+];
+
+/** Readable blocks of one section, in page order, starting with its heading. */
+function sectionBlocks(sectionId: string | null): Element[] {
+  const article = document.querySelector("[data-lesson-article]");
+  if (!article) return [];
+  const heading = sectionId ? document.getElementById(sectionId) : null;
+  const out: Element[] = heading ? [heading] : [];
+  let el = heading ? heading.nextElementSibling : article.firstElementChild;
+  while (el && el.tagName !== "H2") {
+    if (el.matches(BLOCK_SELECTOR)) out.push(el);
+    out.push(...el.querySelectorAll(BLOCK_SELECTOR));
+    el = el.nextElementSibling;
+  }
+  // <p> inside a list item is part of that item, not a block of its own.
+  return out.filter((b) => !(b.tagName === "P" && b.parentElement?.closest("li")));
+}
+
+/**
+ * Pairs every spoken paragraph of a section (across its chunks) with the
+ * block on the page it came from, by matching the start of their text.
+ * Unmatched paragraphs map to null and simply keep the previous highlight.
+ */
+function mapSection(chunks: ListenChunk[], sectionId: string | null) {
+  const blocks = sectionBlocks(sectionId);
+  const keys = blocks.map((b) => speechKey(b.textContent ?? ""));
+  const result = new Map<number, (Element | null)[]>();
+  let j = 0;
+  let last: Element | null = null;
+  chunks.forEach((chunk, ci) => {
+    if (chunk.sectionId !== sectionId) return;
+    result.set(
+      ci,
+      chunk.paras.map(({ k }) => {
+        if (k === CONT_KEY) return last;
+        let found = -1;
+        for (let x = j; x < Math.min(blocks.length, j + 12); x++) {
+          const hit =
+            k === CODE_KEY
+              ? blocks[x].tagName === "PRE"
+              : k !== "" && keys[x] !== "" && (keys[x].startsWith(k) || k.startsWith(keys[x]));
+          if (hit) {
+            found = x;
+            break;
+          }
+        }
+        if (found < 0) return null;
+        j = found + 1;
+        last = blocks[found];
+        return last;
+      }),
+    );
+  });
+  return result;
+}
 
 function loadPrefs(): { rate: number; voice: Voice } {
   try {
@@ -58,6 +127,11 @@ export function LessonListen({
   const [rate, setRate] = useState(1);
   const [voice, setVoice] = useState<Voice>("female");
   const [error, setError] = useState<string | null>(null);
+  // Which paragraph of which chunk is being read (estimated from audio time).
+  const [reading, setReading] = useState({ chunk: 0, para: 0 });
+  const mapRef = useRef<{ sectionId: string | null; map: Map<number, (Element | null)[]> } | null>(
+    null,
+  );
 
   // First chunk of every section, for the jump list and skip buttons.
   const sectionStarts = useMemo(
@@ -92,7 +166,7 @@ export function LessonListen({
     if (audioRef.current) audioRef.current.playbackRate = rate;
   }, [rate]);
 
-  // Highlight and scroll to the heading being read.
+  // Colour the heading of the section being read.
   const sectionId = active ? current?.sectionId : null;
   useEffect(() => {
     if (!sectionId) return;
@@ -101,9 +175,49 @@ export function LessonListen({
     // accentText can hold several classes ("text-teal-600 dark:text-teal-400").
     const classes = [...accentText.split(/\s+/).filter(Boolean), "transition-colors"];
     el.classList.add(...classes);
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
     return () => el.classList.remove(...classes);
   }, [sectionId, accentText]);
+
+  // Highlight the paragraph being read and keep it on screen.
+  const para = reading.chunk === index ? reading.para : 0;
+  useEffect(() => {
+    if (!active || !current) return;
+    if (!mapRef.current || mapRef.current.sectionId !== current.sectionId) {
+      mapRef.current = {
+        sectionId: current.sectionId,
+        map: mapSection(chunks, current.sectionId),
+      };
+    }
+    // Nearest matched paragraph at or before the current one.
+    const list = mapRef.current.map.get(index) ?? [];
+    let el: Element | null = null;
+    for (let p = Math.min(para, list.length - 1); p >= 0 && !el; p--) el = list[p];
+    if (!el) return;
+    el.classList.add(...HIGHLIGHT);
+    const r = el.getBoundingClientRect();
+    // Leave room for the sticky nav on top and the player bar at the bottom.
+    if (r.top < 90 || r.bottom > window.innerHeight - 110) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    return () => el.classList.remove(...HIGHLIGHT);
+  }, [active, current, index, para, chunks]);
+
+  function onTimeUpdate(audio: HTMLAudioElement) {
+    const paras = chunks[index]?.paras ?? [];
+    const total = paras.reduce((a, p) => a + p.n, 0);
+    if (!total) return;
+    // Cached audio knows its duration; a first-time stream doesn't yet, so
+    // fall back to the voice's average speaking rate.
+    const duration =
+      Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : total / CHARS_PER_SECOND;
+    const pos = Math.min(1, audio.currentTime / duration) * total;
+    let acc = 0;
+    let p = 0;
+    while (p < paras.length - 1 && acc + paras[p].n <= pos) acc += paras[p++].n;
+    if (reading.chunk !== index || reading.para !== p) setReading({ chunk: index, para: p });
+  }
 
   function start() {
     const prefs = loadPrefs();
@@ -188,6 +302,7 @@ export function LessonListen({
         onWaiting={() => setLoading(true)}
         onPlaying={() => setLoading(false)}
         onCanPlay={() => setLoading(false)}
+        onTimeUpdate={(e) => onTimeUpdate(e.currentTarget)}
         onEnded={() => {
           if (index + 1 < chunks.length) setIndex(index + 1);
           else {
