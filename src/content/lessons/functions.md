@@ -1,779 +1,529 @@
-*Bangla + English mixed notes.* — **Python Module 06**
+*Bangla + English mixed notes.* — **Python Module 06** (course lesson-by-lesson notes)
+
+**Week 02: Python Foundations for Machine Learning 2** → **Module 06: Function Through the Lens of ML**
 
 > 📓 **Class notebook:** `module-06-functions.ipynb` — [👁️ View](/ai/ml/notebooks/module-06-functions) / [⬇️ Download](/notebooks/module-06-functions.ipynb)
 
-> এই module-এ **Functions** শিখব — কীভাবে code-কে reusable block বানাতে হয়, input নিতে হয়, output return করতে হয়। তারপর iterator, generator, lambda, এবং `map` / `filter` / `reduce` দিয়ে data process করা শিখব।
+**1 hr 23 min | 15 units** (8 video lessons — 79 min, plus text instructions)
 
-## Roadmap
+## Exact Course Roadmap
 
-1. 6.1 Defining a Function
-2. 6.2 Function Parameters (Input)
-3. 6.3 `*args` and `**kwargs`
-4. 6.4 `return` (Output)
-5. 6.5 Iterator
-6. 6.6 Generator
-7. 6.7 Lambda Function
-8. 6.8 `map()`
-9. 6.9 `filter()`
-10. 6.10 `reduce()`
-
-### 🎯 Module Goal
-
-Function হলো একটা **machine** এর মতো:
-
-```text
-Input (parameters)
-      ↓
-  [ Function ]
-      ↓
-Output (return)
-```
-
-Main concepts:
-
-- `def` দিয়ে function বানানো
-- Default, positional, keyword arguments
-- `*args`, `**kwargs`
-- `return` এবং multiple values return
-- `iter()` / `next()`
-- `yield` দিয়ে generator
-- `lambda`
-- `map`, `filter`, `reduce`
+1. **6.1 Function** — 9 min
+2. **6.2 Structure of a function – Parameters** — 8 min
+3. **6.3 Structure of a func – Return and Doc** — 7 min
+4. **6.4 Positional Arguments** — 7 min
+5. **6.5 Keyword Arguments** — 8 min
+6. **6.6 Return Type of a Function** — 14 min
+7. **6.7 Iterator and Generator** — 15 min
+8. **6.8 Lambda, Map and Apply function** — 11 min
 
 ---
 
-## 6.1 — Defining a Function
+## 6.1 Function
 
-### Function কী?
-
-Function হলো reusable code block যেটা একটা নির্দিষ্ট কাজ করে। একবার লিখে বারবার call করা যায়।
+Function হলো reusable code-এর block, যেটা নির্দিষ্ট কাজ করে।
 
 ```python
 def greet():
-    print("hello")
-```
+    print("Hello!")
 
-এখানে:
-
-```text
-def     → function define করার keyword
-greet   → function-এর নাম
-()      → parameters (এখানে নেই)
-:       → এরপর indented body
-```
-
-শুধু define করলে কিছু হয় না। Function **call** করতে হয়:
-
-```python
 greet()
 ```
 
-```text
-hello
-```
+Output: `Hello!`
 
-`greet()` লিখলেই function-এর body execute হয়।
+- `def` দিয়ে function define হয়।
+- `greet` function-এর নাম।
+- `()` call করার সময় ব্যবহার হয়।
+- `:` function body শুরু করে।
+- Indentation-এর ভিতরের code function-এর অংশ।
+
+একবার define করে অনেকবার call করা যায়। Function code reuse, repetition কমানো, code organize করা এবং বড় problem ছোট অংশে ভাগ করতে সাহায্য করে।
 
 ---
 
-## 6.2 — Function Parameters (Input)
+## 6.2 Structure of a Function — Parameters
 
-### Parameter with default value
-
-```python
-def greet(user="guest"):
-    print(f"hello {user}")
-```
+Function বাইরের value receive করতে পারে।
 
 ```python
-greet("adil")
+def greet(name):
+    print("Hello", name)
+
+greet("Riaz")
 ```
 
-```text
-hello adil
-```
+Output: `Hello Riaz`
 
-`user="guest"` হলো **default value**। কোনো argument না দিলে `greet()` → `hello guest` print করবে।
+- `name` হলো **parameter** — function definition-এর variable।
+- `"Riaz"` হলো **argument** — function call-এর actual value।
 
-### Positional vs Keyword argument
+Multiple parameters:
 
 ```python
-def square_addition(a, b, c):
-    print(f"{a} {b} {c}")
-    a = a ** 2
-    b = b ** 2
-    return a + b + c
+def add(a, b):
+    print(a + b)
 
-# positional argument
-ans = square_addition(10, 20, 30) + 10
-print(ans)
-
-# keyword argument
-ans = square_addition(b=10, c=20, a=30) + 10
-print(ans)
+add(10, 20)  # 30
 ```
 
-```text
-10 20 30
-540
-30 10 20
-1030
-```
+Default parameter:
 
-- **Positional** → order অনুযায়ী value বসে: `a=10, b=20, c=30` → `100 + 400 + 30 + 10 = 540`।
-- **Keyword** → নাম ধরে value বসে, order matter করে না: `a=30, b=10, c=20` → `900 + 100 + 20 + 10 = 1030`।
+```python
+def greet(name="Friend"):
+    print("Hello", name)
 
-```text
-square_addition(10, 20, 30)        → a=10, b=20, c=30   (position দিয়ে)
-square_addition(b=10, c=20, a=30)  → a=30, b=10, c=20   (name দিয়ে)
+greet()        # Hello Friend
+greet("Riaz")  # Hello Riaz
 ```
 
 ---
 
-## 6.3 — `*args` and `**kwargs`
+## 6.3 Structure of a Function — Return and Doc
 
-### `*args` — যত খুশি positional argument
+### `return`
 
-কতগুলো input আসবে জানা না থাকলে `*args` ব্যবহার করি। সব values একটা **tuple** হিসেবে আসে।
-
-```python
-def square_addition(*args):
-    summation = 0
-    for i in args:
-        i = i ** 2
-        summation += i
-    return summation
-```
+`return` function থেকে result caller-এর কাছে পাঠায়।
 
 ```python
-ans = square_addition(10, 20, 30, 40, 50)
-print(ans)
-```
-
-```text
-5500
-```
-
-```text
-args → (10, 20, 30, 40, 50)
-100 + 400 + 900 + 1600 + 2500 = 5500
-```
-
-### `**kwargs` — যত খুশি keyword argument
-
-`**kwargs` সব `name=value` pairs একটা **dictionary** হিসেবে নেয়।
-
-```python
-def student(**kwargs):
-    for key, val in kwargs.items():
-        print(f"{key} : {val}")
-```
-
-```python
-student(name="adil", cls=10, roll=30, marks=30.5)
-```
-
-```text
-name : adil
-cls : 10
-roll : 30
-marks : 30.5
-```
-
-```text
-kwargs → {"name": "adil", "cls": 10, "roll": 30, "marks": 30.5}
-```
-
-| Syntax | কী নেয় | ভিতরে type |
-|---|---|---|
-| `*args` | Extra positional values | `tuple` |
-| `**kwargs` | Extra keyword values | `dict` |
-
----
-
-## 6.4 — `return` (Output)
-
-`return` function থেকে value **বাইরে পাঠায়**। `print` শুধু screen-এ দেখায়, কিন্তু `return` করা value আমরা variable-এ রাখতে পারি।
-
-### Return int
-
-```python
-def give_prediction():
-    return 10
-
-type(give_prediction())
-```
-
-```text
-int
-```
-
-### Return float
-
-```python
-def give_prediction():
-    return 10.5
-
-type(give_prediction())
-```
-
-```text
-float
-```
-
-### Return string
-
-```python
-def give_prediction():
-    return "name"
-
-type(give_prediction())
-```
-
-```text
-str
-```
-
-Function যে type-এর value return করে, call-এর result সেই type-এর হয়।
-
-### Multiple values return + unpacking
-
-```python
-def give_prediction(a, b):
-    return a, b
-
-print(type(give_prediction(10, 30)))
-print(give_prediction(10, 30))
-
-# unpacking
-x, y = give_prediction(10, 30)
-print(x, y)
-```
-
-```text
-<class 'tuple'>
-(10, 30)
-10 30
-```
-
-`return a, b` আসলে একটা **tuple** return করে। `x, y = ...` দিয়ে tuple-কে আলাদা variables-এ **unpack** করা যায়।
-
-### Return multiple lists
-
-```python
-def give_prediction():
-    a = [10, 20, 30]
-    b = [20, 30, 40]
-    return a, b
-
-# unpacking
-x, y = give_prediction()
-
-print(x)
-print(y)
-```
-
-```text
-[10, 20, 30]
-[20, 30, 40]
-```
-
-যেকোনো type return করা যায় — list-ও।
-
-### Return a set and a list
-
-```python
-def give_prediction():
-    a = {10, 20, 30}
-    b = [100, 200, 300]
-    return a, b
-
-x = give_prediction()
-
-print(type(x))
-
-for item in x:
-    print(item)
-```
-
-```text
-<class 'tuple'>
-{10, 20, 30}
-[100, 200, 300]
-```
-
-Unpack না করলে পুরো result একটা tuple — তাই loop চালিয়ে প্রতিটা item পাওয়া যায়।
-
-### Return dictionaries
-
-```python
-def give_prediction():
-    return {"name": "adil", "addr": "Ctg"}, {"name": "abrar", "addr": "dhaka"}
-
-x, y = give_prediction()
-
-print(type(x))
-
-for item in x.items():
-    print(item)
-```
-
-```text
-<class 'dict'>
-('name', 'adil')
-('addr', 'Ctg')
-```
-
-দুইটা dictionary return হয়েছে; `x` হলো প্রথমটা। `.items()` প্রতিটা `(key, value)` pair দেয়।
-
----
-
-## 6.5 — Iterator
-
-**Iterable** (list, set, string…) থেকে `iter()` দিয়ে **iterator** বানানো যায়। Iterator একবারে **একটা করে** item দেয় `next()` call করলে।
-
-```python
-s = {10, 20, 30, 40, 50}
-
-s_iter = iter(s)
-print(next(s_iter))
-print(next(s_iter))
-print(next(s_iter))
-print(next(s_iter))
-print(next(s_iter))
-
-for i in s:
-    print(i)
-```
-
-```text
-50
-20
-40
-10
-30
-50
-20
-40
-10
-30
-```
-
-- Set unordered, তাই order `10, 20, 30…` না হয়ে অন্যরকম এসেছে।
-- `for` loop আসলে ভিতরে ভিতরে এই `iter()` + `next()` ই ব্যবহার করে।
-- সব item শেষ হলে আবার `next()` call করলে `StopIteration` error আসে।
-
-```text
-iter(s)  → iterator তৈরি
-next()   → পরের item
-শেষ হলে → StopIteration
-```
-
----
-
-## 6.6 — Generator
-
-Generator হলো এমন function যেটা `return`-এর বদলে **`yield`** ব্যবহার করে। এটা সব data একসাথে memory-তে না রেখে **দরকার মতো একটা একটা chunk** দেয়।
-
-ML-এ বড় dataset batch-এ batch-এ load করতে এটা খুব useful (data loader)।
-
-```python
-lst = [x for x in range(500)]  # dataset
-
-def data_loader(chunk_size, lst):
-    for i in range(0, len(lst), chunk_size):
-        yield lst[i:i + chunk_size]
-
-x = data_loader(5, lst)
-
-print(next(x))
-print(next(x))
-```
-
-```text
-[0, 1, 2, 3, 4]
-[5, 6, 7, 8, 9]
-```
-
-প্রতিবার `next(x)` call করলে function আগের জায়গা থেকে resume করে এবং পরের 5টা item `yield` করে।
-
-```text
-return → একবার value দিয়ে function শেষ
-yield  → value দেয়, pause করে, পরে আবার continue
-```
-
----
-
-## 6.7 — Lambda Function
-
-Lambda হলো **ছোট, একলাইনের, নামহীন (anonymous)** function।
-
-```python
-def square_addition(x, y):
-    return x ** 2 + y ** 2
-
-sq_add = lambda x, y: x ** 2 + y ** 2
-
-print(sq_add(2, 3))
-```
-
-```text
-13
-```
-
-উপরের `def` version আর `lambda` version একই কাজ করে: `2² + 3² = 4 + 9 = 13`।
-
-```text
-lambda parameters : expression
-```
-
-Lambda-তে শুধু **একটা expression** থাকে, এবং সেটাই auto return হয়।
-
----
-
-## 6.8 — `map()`
-
-`map(function, iterable)` → iterable-এর **প্রতিটা item-এ function apply** করে।
-
-### map with normal function
-
-```python
-lst = [1, 2, 3, 4, 5, 6]
-
-def square(x):
-    return x ** 2
-
-lst = list(map(square, lst))
-
-print(lst)
-```
-
-```text
-[1, 4, 9, 16, 25, 36]
-```
-
-`map` একটা lazy object দেয়, তাই `list()` দিয়ে list বানাতে হয়।
-
-### map on a string
-
-```python
-string = "hello world, welcome to the age of AI"
-string1 = list(map(str.upper, string))
-print(string1)
-string1 = " ".join(string1)
-print(string1)
-```
-
-```text
-['H', 'E', 'L', 'L', 'O', ' ', 'W', 'O', 'R', 'L', 'D', ',', ' ', 'W', 'E', 'L', 'C', 'O', 'M', 'E', ' ', 'T', 'O', ' ', 'T', 'H', 'E', ' ', 'A', 'G', 'E', ' ', 'O', 'F', ' ', 'A', 'I']
-H E L L O   W O R L D ,   W E L C O M E   T O   T H E   A G E   O F   A I
-```
-
-String-এর প্রতিটা character-এ `str.upper` apply হয়েছে। `" ".join` প্রতিটা character-এর মাঝে space বসায় — `"".join` দিলে আবার normal sentence পাওয়া যেত।
-
-### map with lambda
-
-```python
-lst = [1, 2, 3, 4, 5, 6]
-
-lst = list(map(lambda x: x ** 2, lst))
-
-print(lst)
-```
-
-```text
-[1, 4, 9, 16, 25, 36]
-```
-
-আলাদা `def` না লিখে সরাসরি lambda দিয়েই কাজ হয়ে গেছে।
-
----
-
-## 6.9 — `filter()`
-
-`filter(function, iterable)` → যেসব item-এর জন্য function **True** দেয়, শুধু সেগুলো রাখে।
-
-### Numbers filter
-
-```python
-numbers = [x for x in range(100)]
-
-# even
-even = list(filter(lambda x: x % 2 == 0, numbers))
-# print(even)
-
-fifty_upper = list(filter(lambda x: x > 50, numbers))
-
-print(fifty_upper)
-```
-
-```text
-[51, 52, 53, 54, 55, 56, 57, 58, 59, 60, ..., 95, 96, 97, 98, 99]
-```
-
-`even` → শুধু জোড় সংখ্যা; `fifty_upper` → 50-এর বড় সংখ্যা।
-
-### `filter(None, ...)` — falsy values বাদ
-
-```python
-data = [0, 1, '', None, 'Hello', [], [1, 2], None, True, False, None]
-
-cleaned_data = list(filter(None, data))
-
-print(cleaned_data)
-```
-
-```text
-[1, 'Hello', [1, 2], True]
-```
-
-Function-এর জায়গায় `None` দিলে **falsy** values (`0`, `''`, `None`, `[]`, `False`) বাদ যায়। Data cleaning-এ useful।
-
-### String filter — vowels
-
-```python
-# string1 আগের map example থেকে আসা uppercase string
-vowel_ = list(filter(lambda x: x in "AEIOU", string1))
-
-print(vowel_)
-```
-
-```text
-['E', 'O', 'O', 'E', 'O', 'E', 'O', 'E', 'A', 'E', 'O', 'A', 'I']
-```
-
-String-এর প্রতিটা character check হয়েছে — vowel হলে রাখা হয়েছে।
-
-### Length দিয়ে filter
-
-```python
-fruits = ['aaa', 'bb', 'cccc', 'ddddd']
-
-filtering = list(filter(lambda x: len(x) > 2, fruits))
-
-print(filtering)
-```
-
-```text
-['aaa', 'cccc', 'ddddd']
-```
-
-`'bb'`-এর length 2, তাই বাদ পড়েছে।
-
----
-
-## 6.10 — `reduce()`
-
-`reduce` পুরো list-কে **একটা single value**-তে নিয়ে আসে — দুইটা দুইটা করে combine করে। এটা `functools` থেকে import করতে হয়।
-
-```python
-from functools import reduce
-```
-
-### Sum
-
-```python
-lst = [1, 2, 3, 4, 5, 6]
-
-summation = reduce(lambda x, y: x + y, lst)
-
-print(summation)
-```
-
-```text
-21
-```
-
-```text
-1 + 2 = 3
-3 + 3 = 6
-6 + 4 = 10
-10 + 5 = 15
-15 + 6 = 21
-```
-
-### Max value
-
-```python
-lst = [1, 2, 10, 4, 5, 6]
-
-max_value = reduce(lambda x, y: x if x > y else y, lst)
-
-print(max_value)
-```
-
-```text
-10
-```
-
-প্রতিবার দুইটার মধ্যে বড়টা রাখে — শেষে সবচেয়ে বড় value থাকে।
-
-### Strings join
-
-```python
-lst = ["hello", "world", "welcome", "to", "programming"]
-print(lst)
-```
-
-```text
-['hello', 'world', 'welcome', 'to', 'programming']
-```
-
-```python
-string = reduce(lambda x, y: x + " " + y, lst)
-print(string)
-```
-
-```text
-hello world welcome to programming
-```
-
-Words গুলো space দিয়ে জোড়া লেগে একটা sentence হয়েছে।
-
----
-
-## Common Confusions
-
-### `print` vs `return`
-
-```text
-print  → শুধু screen-এ দেখায়, value বাইরে যায় না
-return → value বাইরে পাঠায়, variable-এ রাখা যায়
-```
-
-`return` না থাকলে function automatically `None` return করে।
-
-### Parameter vs Argument
-
-```text
-def greet(user):   → user = parameter (definition-এ)
-greet("adil")      → "adil" = argument (call-এ)
-```
-
-### `*args` vs `**kwargs`
-
-```text
-*args    → tuple   (10, 20, 30)
-**kwargs → dict    {"name": "adil"}
-```
-
-### `return` vs `yield`
-
-```text
-return → সব একবারে দেয়, function শেষ
-yield  → একটা একটা করে দেয়, pause/resume
-```
-
-### `map` vs `filter` vs `reduce`
-
-```text
-map    → প্রতিটা item transform     (same length)
-filter → কিছু item বাদ দেয়         (ছোট বা same length)
-reduce → সব মিলিয়ে একটা value     (single value)
-```
-
-### `map`/`filter` কেন `list()` দিয়ে wrap করি?
-
-এরা lazy object return করে। `list()` না দিলে print করলে `<map object at ...>` দেখাবে।
-
----
-
-## Quick Practice
-
-### Q1
-
-```python
-def add(a, b=5):
+def add(a, b):
     return a + b
 
-print(add(10))
+result = add(10, 20)
+print(result)  # 30
 ```
 
-Output?
-
-### Q2
+### `print()` vs `return`
 
 ```python
-def f(*args):
-    return len(args)
+def add_print(a, b):
+    print(a + b)
 
-print(f(1, 2, 3, 4))
+def add_return(a, b):
+    return a + b
+
+x = add_print(2, 3)   # screen-এ 5 দেখায়
+y = add_return(2, 3)  # y-এর মধ্যে 5 ফেরত আসে
+
+print(x)  # None
+print(y)  # 5
 ```
 
-Output?
+মনে রাখো: **print দেখায়, return value ফেরত দেয়।**
 
-### Q3
+`return` execute হলে function সেখানেই শেষ হয়।
+
+### Docstring
+
+Function কী কাজ করে তা document করতে function-এর শুরুতে triple quotes ব্যবহার হয়:
 
 ```python
-def f():
-    return 1, 2
+def square(number):
+    """Return the square of a number."""
+    return number * number
 
-print(type(f()))
+print(square.__doc__)
 ```
 
-Output?
+---
 
-### Q4
+## 6.4 Positional Arguments
+
+Positional arguments-এ value parameter-এর **position/order অনুযায়ী** assign হয়।
 
 ```python
-print(list(map(lambda x: x * 10, [1, 2, 3])))
+def introduce(name, city):
+    print(name, "lives in", city)
+
+introduce("Riaz", "Dhaka")
 ```
 
-Output?
+Mapping:
 
-### Q5
+```text
+"Riaz"  → name (first parameter)
+"Dhaka" → city (second parameter)
+```
+
+Order বদলালে value-ও অন্য parameter-এ যাবে।
 
 ```python
-print(list(filter(lambda x: x % 2 == 1, [1, 2, 3, 4, 5])))
+def subtract(a, b):
+    return a - b
+
+print(subtract(10, 3))  # 7
+print(subtract(3, 10))  # -7
 ```
 
-Output?
+---
 
-### Q6
+## 6.5 Keyword Arguments
+
+Keyword arguments-এ parameter-এর নাম লিখে value পাঠানো হয়।
 
 ```python
-from functools import reduce
-print(reduce(lambda x, y: x * y, [1, 2, 3, 4]))
+def introduce(name, city):
+    print(name, "lives in", city)
+
+introduce(city="Dhaka", name="Riaz")
 ```
 
+Output: `Riaz lives in Dhaka`
+
+এখানে order বদলালেও parameter name-এর কারণে সঠিক value assign হয়।
+
+Positional argument আগে, keyword argument পরে:
+
+```python
+def student(name, age, city):
+    print(name, age, city)
+
+student("Riaz", age=27, city="Dhaka")
+```
+
+---
+
+## 6.6 Return Type of a Function
+
+Python function বিভিন্ন ধরনের value return করতে পারে।
+
+Integer:
+```python
+def get_age():
+    return 27
+```
+
+String:
+```python
+def get_name():
+    return "Riaz"
+```
+
+Boolean:
+```python
+def is_adult(age):
+    return age >= 18
+
+print(is_adult(27))  # True
+```
+
+List:
+```python
+def get_numbers():
+    return [10, 20, 30]
+```
+
+Multiple values:
+```python
+def calculate(a, b):
+    return a + b, a - b
+
+result = calculate(10, 3)
+print(result)  # (13, 7)
+```
+
+Python multiple returned values-কে tuple হিসেবে pack করে। Unpack করা যায়:
+
+```python
+total, difference = calculate(10, 3)
+```
+
+Explicit `return` না থাকলে function `None` return করে।
+
+### Type hints
+
+```python
+def add(a: int, b: int) -> int:
+    return a + b
+```
+
+এগুলো expected type বোঝায়; Python runtime-এ সবসময় type enforce করে না।
+
+---
+
+## 6.7 Iterator and Generator
+
+### Iterable
+
+যে object-এর item একটার পর একটা iterate করা যায়, সেটি iterable। Examples: list, string, tuple।
+
+```python
+for item in [10, 20, 30]:
+    print(item)
+```
+
+### Iterator
+
+Iterator হলো object যেটা `next()` দিয়ে একবারে একটি item দেয়।
+
+```python
+numbers = [10, 20, 30]
+it = iter(numbers)
+
+print(next(it))  # 10
+print(next(it))  # 20
+print(next(it))  # 30
+```
+
+সব item শেষ হলে `next()` সাধারণভাবে `StopIteration` exception দেয়।
+
+```text
+Iterable → যার উপর iterate করা যায়
+Iterator → next() দিয়ে পরের item দেয়
+```
+
+### Generator
+
+Generator হলো iterator তৈরির সহজ উপায়। Function-এর ভিতরে `yield` ব্যবহার করে।
+
+```python
+def count_up_to_three():
+    yield 1
+    yield 2
+    yield 3
+
+for number in count_up_to_three():
+    print(number)
+```
+
+Output: `1, 2, 3`
+
+#### `return` vs `yield`
+
+- `return` function শেষ করে result ফেরত দেয়।
+- `yield` একটি value দেয়, function-এর state রেখে pause করে; পরে আবার resume হয়।
+
+Generator বড় data-র item প্রয়োজন অনুযায়ী produce করতে পারে, তাই memory efficient হতে পারে।
+
+---
+
+## 6.8 Lambda, Map and Apply Function
+
+### Lambda
+
+Lambda হলো ছোট anonymous function।
+
+```python
+square = lambda x: x * x
+print(square(5))  # 25
+```
+
+Structure: `lambda parameters: expression`
+
+Multiple parameters:
+
+```python
+add = lambda a, b: a + b
+print(add(3, 4))  # 7
+```
+
+ছোট expression-এর জন্য lambda useful; complex logic-এর জন্য normal `def` বেশি readable।
+
+### `map()`
+
+`map()` iterable-এর প্রতিটি item-এর উপর একটি function apply করে।
+
+```python
+numbers = [1, 2, 3, 4]
+squares = map(lambda x: x * x, numbers)
+
+print(list(squares))
+```
+
+Output: `[1, 4, 9, 16]`
+
+`map()` Python 3-এ iterator return করে; result দেখতে `list()` দিয়ে convert করেছি।
+
+### Apply function — Important distinction
+
+Screenshot-এ lesson title “Lambda, Map and Apply function”।
+
+Python 3-এ পুরোনো built-in `apply()` function নেই (এটি Python 2-এ ছিল)। Data analysis-এ **Pandas `.apply()` method** ব্যবহার হয়:
+
+```python
+import pandas as pd
+
+numbers = pd.Series([1, 2, 3, 4])
+squares = numbers.apply(lambda x: x * x)
+
+print(squares)
+```
+
+এখানে `.apply()` হলো Pandas-এর method, Python built-in `apply()` নয়।
+
+---
+
+## 🧠 Full Mental Model
+
+```text
+Function → reusable code
+    ↓
+Parameters receive input
+    ↓
+Arguments are passed
+    ↓
+Return sends result back
+    ↓
+Positional / Keyword arguments
+    ↓
+Function returns different types
+    ↓
+Iterator gives items one by one
+    ↓
+Generator produces items using yield
+    ↓
+Lambda creates short function
+    ↓
+map / apply transforms data
+```
+
+---
+
+## 🔗 ML / Data Science Connection
+
+Functions data science-এ বারবার ব্যবহার হয়:
+
+- Data cleaning
+- Feature transformation
+- Reusable preprocessing
+- Custom calculations
+- Iterating through datasets
+- Applying transformations to columns
+
+Example:
+
+```python
+def normalize(value, maximum):
+    return value / maximum
+
+scores = [20, 40, 60, 80, 100]
+normalized = list(map(lambda x: normalize(x, 100), scores))
+
+print(normalized)
+```
+
+Output: `[0.2, 0.4, 0.6, 0.8, 1.0]`
+
+---
+
+## ❗ Common Confusions
+
+| Concept | মনে রাখবে |
+|---|---|
+| Function definition | `def` দিয়ে তৈরি |
+| Function call | Function name দিয়ে execute |
+| Parameter | Definition-এর variable |
+| Argument | Call-এর actual value |
+| `print()` | Screen-এ দেখায় |
+| `return` | Value ফেরত দেয় |
+| Positional | Position অনুযায়ী assign |
+| Keyword | Name অনুযায়ী assign |
+| Iterable | যার উপর iterate করা যায় |
+| Iterator | `next()` দিয়ে item দেয় |
+| Generator | `yield` দিয়ে item produce |
+| Lambda | ছোট anonymous function |
+| `map()` | Iterable-এর প্রতিটি item transform |
+| Pandas `.apply()` | Pandas data-তে function apply |
+
+---
+
+## 📝 Quick Practice
+
+**Q1**
+```python
+def greet():
+    print("Hello")
+greet()
+```
+Output কী?
+
+**Q2**
+```python
+def double(x):
+    return x * 2
+print(double(6))
+```
+Output কত?
+
+**Q3** `print()` এবং `return`-এর main difference কী?
+
+**Q4**
+```python
+def subtract(a, b):
+    return a - b
+print(subtract(10, 4))
+```
+Output কত?
+
+**Q5**
+```python
+def introduce(name, city):
+    print(name, city)
+introduce(city="Dhaka", name="Riaz")
+```
+কী print হবে?
+
+**Q6** `return [1, 2, 3]` করলে return type কী?
+
+**Q7**
+```python
+items = iter([10, 20, 30])
+print(next(items))
+```
+Output কী?
+
+**Q8** Generator-এ value produce করতে কোন keyword লাগে?
+
+A. `return`  B. `yield`  C. `print`
+
+**Q9**
+```python
+double = lambda x: x * 2
+print(double(5))
+```
 Output?
 
-### Q7
-
-Function-এর ভিতরে `yield` থাকলে সেটাকে কী বলে?
+**Q10**
+```python
+list(map(lambda x: x + 1, [1, 2, 3]))
+```
+Result?
 
 ### Answers
 
-1. **15**
-2. **4**
-3. **`<class 'tuple'>`**
-4. **`[10, 20, 30]`**
-5. **`[1, 3, 5]`**
-6. **24**
-7. **Generator**
+1. `Hello`
+2. `12`
+3. `print()` screen-এ দেখায়; `return` value caller-এর কাছে ফেরত দেয়।
+4. `6`
+5. `Riaz Dhaka`
+6. `list`
+7. `10`
+8. **B — `yield`**
+9. `10`
+10. `[2, 3, 4]`
 
 ---
 
-## Final Cheat Sheet
+## 🎯 Final Cheat Sheet
 
-| Concept | Core idea |
+| Topic | Core idea |
 |---|---|
+| Function | Reusable code block |
 | `def` | Function define |
-| Default parameter | `def f(x=1)` — value না দিলে default |
-| Positional argument | Order অনুযায়ী বসে |
-| Keyword argument | নাম দিয়ে বসে, order matter করে না |
-| `*args` | Extra positional → tuple |
-| `**kwargs` | Extra keyword → dict |
-| `return` | Value বাইরে পাঠায় |
-| `return a, b` | Tuple return → unpack করা যায় |
-| `iter()` / `next()` | একটা একটা item নেওয়া |
-| Generator (`yield`) | Lazy, chunk-by-chunk data |
-| `lambda` | One-line anonymous function |
-| `map(f, data)` | প্রতিটা item-এ f apply |
-| `filter(f, data)` | True হওয়া item রাখে |
-| `filter(None, data)` | Falsy values বাদ |
-| `reduce(f, data)` | সব মিলিয়ে single value |
+| Parameter | Function-এর input variable |
+| Argument | Call-এর value |
+| `return` | Result ফেরত |
+| Docstring | Function documentation |
+| Positional | Position অনুযায়ী argument |
+| Keyword | Name অনুযায়ী argument |
+| Return type | Function কী value দেয় |
+| Iterable | Iterate করা যায় |
+| Iterator | একবারে একটি item দেয় |
+| Generator | `yield` দিয়ে item produce |
+| Lambda | ছোট anonymous function |
+| `map()` | প্রতিটি item transform |
+| Pandas `.apply()` | Pandas data-তে function apply |
 
 ### One-line Mental Model
 
-> **Function = input নিয়ে কাজ করে output দেওয়া reusable machine; `map`/`filter`/`reduce` = সেই machine-কে পুরো data-র উপর চালানো।**
+> **Function = reusable logic; parameters দিয়ে input নেয়, return দিয়ে output দেয়, আর iterator/generator/map দিয়ে data step-by-step process করা যায়।**
