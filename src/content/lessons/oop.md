@@ -1,526 +1,618 @@
-*Bangla + English mixed notes.* — **Python Module 08**
+*Bangla + English mixed notes.* — **Python Module 09** (course lesson-by-lesson notes)
 
 > 📓 **Class notebook:** `module-08-oop.ipynb` — [👁️ View](/ai/ml/notebooks/module-08-oop) / [⬇️ Download](/notebooks/module-08-oop.ipynb)
 
-> এই module-এ **Object-Oriented Programming (OOP)** শিখব — class আর object দিয়ে real-world জিনিসকে code-এ model করা, এবং OOP-এর 4টা pillar: **Inheritance, Polymorphism, Encapsulation, Abstraction**।
+**Course duration:** 1 hr 36 min | **13 units**
 
-## Roadmap
-
-1. 8.1 Class and Objects
-2. 8.2 Single Inheritance
-3. 8.3 Multiple Inheritance
-4. 8.4 Polymorphism
-5. 8.5 Encapsulation
-6. 8.6 Abstraction
-
-### 🎯 Module Goal
-
-Class হলো **blueprint (নকশা)**, object হলো সেই নকশা থেকে বানানো **real জিনিস**।
-
-```text
-Class: Phone  (blueprint)
-   ├── object: apple      ("Iphone17")
-   ├── object: blueberry  ("B-17")
-   └── object: motorola   ("M-17")
-```
-
-OOP-এর 4 pillar:
-
-```text
-Inheritance   → parent-এর জিনিস child পায়
-Polymorphism  → একই method, ভিন্ন ভিন্ন behavior
-Encapsulation → data লুকিয়ে রাখা, method দিয়ে access
-Abstraction   → শুধু "কী করবে" বলা, "কীভাবে" child ঠিক করবে
-```
-
-Machine learning library (যেমন scikit-learn, PyTorch) পুরোটাই class দিয়ে বানানো — তাই OOP বোঝা খুব important।
+> Screenshot-এ visible lesson titles অনুযায়ী এই note তৈরি করা হয়েছে। Header-এ 13 units দেখা গেলেও screenshot-এ শেষের সব unit দেখা যায়নি; তাই missing lesson title বা duration invent করা হয়নি।
 
 ---
 
-## 8.1 — Class and Objects
+## 📚 Exact Course Roadmap
 
-### Class define করা
-
-```python
-# base class / parent class
-class Phone:
-    category = "Electronics"
-
-    # constructor
-    def __init__(self, model, battery, camera, battery_percentage=100):
-        self.model = model
-        self.battery = battery
-        self.camera = camera
-        self.battery_percentage = battery_percentage
-
-    # methods
-    def charge(self, hour):
-        print(f"charge completed by {hour}")
-
-    def capture(self, photo):
-        if self.battery_percentage <= 0:
-            print("No charge")
-        else:
-            self.battery_percentage -= photo
-            print(f"photo captured in {self.model}")
-
-
-class Cooling_Mechanism:
-    def __init__(self, cooling_method):
-        self.cooling_method = cooling_method
-
-    # methods
-    def cooling_on(self):
-        print(f"the system is being cool by {self.cooling_method}")
-```
-
-Terms:
-
-| Term | মানে | Example |
-|---|---|---|
-| Class attribute | সব object-এর জন্য common | `category = "Electronics"` |
-| Constructor `__init__` | Object বানানোর সময় auto call হয় | `Phone("Iphone17", ...)` |
-| `self` | যে object-এর উপর কাজ হচ্ছে সেটা | `self.model` |
-| Instance attribute | প্রতিটা object-এর নিজস্ব data | `self.battery` |
-| Method | Class-এর ভিতরের function | `charge()`, `capture()` |
-
-### Object তৈরি করা
-
-```python
-# creating objects
-apple = Phone("Iphone17", 3000, 40)
-blueberry = Phone("B-17", 4000, 30)
-motorola = Phone("M-17", 3500, 35)
-
-apple.capture(10)
-print(motorola.battery_percentage)
-```
-
-```text
-photo captured in Iphone17
-100
-```
-
-- `apple.capture(10)` শুধু **apple**-এর battery 10 কমিয়েছে (100 → 90)।
-- `motorola`-এর battery আলাদা, তাই সেটা এখনো 100। প্রতিটা object-এর data independent।
+1. **Text Instructions Module 09** — Post content
+2. **9.0 Module Introduction** — 4 min
+3. **9.1 Introduction to OOP** — 5 min
+4. **9.2 Class and Objects Theory** — 5 min
+5. **9.3 Class and Object implementation** — 21 min
+6. **9.4 OOP Inheritance** — duration not visible
+7. **9.5 OOP Polymorphism** — 9 min
+8. **(Optional) 9.6 OOP Encapsulation** — 12 min
+9. **(Optional) 9.7 OOP Abstraction** — 10 min
+10. **9.8 Module Overview** — 11 min
+11. **Quiz Module 09** — Quiz
+12. **Quiz Explanation and Extra Practice Problem (Module 09)** — lower part not fully visible
+13. **One additional unit** — title not visible in provided screenshots
 
 ---
 
-## 8.2 — Single Inheritance
+## 9.0 Module Introduction
 
-Child class parent class-এর সব attribute আর method **inherit** করে, আর নিজের নতুন জিনিসও যোগ করতে পারে।
+আগের Python modules-এ আমরা variables, conditions, loops, lists, dictionaries এবং functions শিখেছি।
 
-```python
-# child / derived class
-class SmartPhone(Phone):
-    def __init__(self, model, battery, camera, processor):
-        super().__init__(model, battery, camera)
-        self.processor = processor
+এখন শিখব **OOP — Object-Oriented Programming**।
 
-    # modified method
-    def charge(self, hour):
-        print("fast charging in process")
-        super().charge(hour)
-```
+OOP-তে code-কে শুধু function বা instruction হিসেবে না দেখে **object** হিসেবে organize করি।
 
-- `class SmartPhone(Phone)` → SmartPhone হলো Phone-এর child।
-- `super().__init__(...)` → parent-এর constructor call করে model, battery, camera set করে।
-- `charge()` method modify (override) করা হয়েছে, আর ভিতরে `super().charge(hour)` দিয়ে parent-এর version-ও চালানো হয়েছে।
+Real-life example:
 
-```python
-pro = SmartPhone("X", 5000, 100, "SnapDragon")
+একটা Car-এর:
+- Data/attributes: brand, color, speed
+- Actions/methods: start, stop, accelerate
 
-print(pro.model)
+Python-এ এই ধারণা দিয়ে reusable এবং organized code তৈরি করা যায়।
 
-pro.charge(1)
-```
+---
+
+## 9.1 Introduction to OOP
+
+### OOP কী?
+
+OOP হলো programming paradigm যেখানে program-কে objects এবং তাদের interaction দিয়ে organize করা হয়।
+
+একটা object-এর সাধারণত দুইটি অংশ থাকে:
 
 ```text
-X
-fast charging in process
-charge completed by 1
+Object
+  ├── Attributes (data/state)
+  └── Methods (behavior/actions)
 ```
 
-`model` Phone থেকে inherited। `charge()` আগে নিজের line print করে, তারপর parent-এর।
+Example — একটি mobile phone:
+
+| Attributes | Methods |
+|---|---|
+| brand | call() |
+| model | take_photo() |
+| battery | charge() |
+
+Python-এ OOP ব্যবহার করলে related data এবং behavior এক জায়গায় রাখা যায়।
+
+### কেন OOP দরকার?
+
+- Code organize করা
+- Reuse করা
+- বড় project maintain করা
+- Real-world entities model করা
+- Related data এবং behavior একসাথে রাখা
+
+OOP সব problem-এর একমাত্র solution নয়; problem অনুযায়ী procedural বা functional style-ও ভালো হতে পারে।
+
+---
+
+## 9.2 Class and Objects Theory
+
+### Class কী?
+
+Class হলো object তৈরির **blueprint/template**।
+
+ধরো, Car-এর design হলো class। সেই design থেকে অনেকগুলো আলাদা car object তৈরি করা যায়।
 
 ```text
-Phone (parent)
-   ↑
-SmartPhone (child) → + processor, modified charge()
+             Car Class
+          /      |      \
+       Car 1   Car 2   Car 3
+```
+
+### Object কী?
+
+Object হলো class থেকে তৈরি actual instance।
+
+Example:
+- `Car` = class
+- Red Toyota = একটি object
+- Blue Honda = আরেকটি object
+
+প্রতিটি object-এর নিজস্ব attribute value থাকতে পারে।
+
+### Attribute vs Method
+
+- **Attribute:** object-এর data/property
+- **Method:** object-এর action/behavior; class-এর ভিতরে define করা function
+
+Example concept:
+
+```text
+Student
+  ├── name      → attribute
+  ├── age       → attribute
+  └── introduce → method
 ```
 
 ---
 
-## 8.3 — Multiple Inheritance
+## 9.3 Class and Object Implementation
 
-একটা class একাধিক parent থেকে inherit করতে পারে।
-
-```python
-class SmartPhone_CoolingMode(SmartPhone, Cooling_Mechanism):
-    def __init__(self, model, battery, camera, processor, cooling_method):
-        SmartPhone.__init__(self, model, battery, camera, processor)
-        Cooling_Mechanism.__init__(self, cooling_method)
-```
-
-দুইটা parent-এর constructor আলাদা আলাদা নাম ধরে call করা হয়েছে, যাতে দুই দিকের attributes-ই set হয়।
+### Basic class
 
 ```python
-pro_cooling = SmartPhone_CoolingMode("Y", 5000, 100, "SD", "Nitrogen")
-
-print(pro_cooling.processor)       # SmartPhone class থেকে
-print(pro_cooling.battery)         # Phone class থেকে
-print(pro_cooling.cooling_method)  # Cooling_Mechanism class থেকে
-pro_cooling.cooling_on()           # Cooling_Mechanism class-এর method
-pro_cooling.charge(1)              # SmartPhone-এর modified charge (Phone থেকে inherited)
+class Student:
+    pass
 ```
 
-```text
-SD
-5000
-Nitrogen
-the system is being cool by Nitrogen
-fast charging in process
-charge completed by 1
-```
+`class` keyword দিয়ে class তৈরি হয়। `pass` আপাতত empty body রাখার জন্য।
 
-একটা object তিনটা class-এর জিনিস ব্যবহার করছে:
-
-```text
-        Phone
-          ↑
-     SmartPhone      Cooling_Mechanism
-            ↖          ↗
-        SmartPhone_CoolingMode
-```
-
----
-
-## 8.4 — Polymorphism
-
-Polymorphism মানে **"many forms"** — একই নামের method, কিন্তু different class-এ different behavior।
-
-### Parent class
+### Object তৈরি
 
 ```python
-class Camera:
+class Student:
+    pass
+
+student1 = Student()
+student2 = Student()
+```
+
+`student1` এবং `student2` হলো আলাদা object/instance।
+
+### `__init__()` — Constructor
+
+Object তৈরি হওয়ার সময় initial data set করতে `__init__()` ব্যবহার করি।
+
+```python
+class Student:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+student1 = Student("Riaz", 27)
+student2 = Student("Hasib", 25)
+
+print(student1.name)  # Riaz
+print(student2.age)   # 25
+```
+
+এখানে:
+- `__init__()` object initialize করে।
+- `self` current object-কে refer করে।
+- `name`, `age` হলো parameters।
+- `self.name`, `self.age` হলো object attributes।
+
+### `self` সহজভাবে
+
+যখন `student1` দিয়ে method call করি, `self` সেই `student1` object-কে refer করে।
+
+```python
+class Student:
     def __init__(self, name):
         self.name = name
 
-    # method
-    def capture(self):
-        print("a photo is captured")
+    def introduce(self):
+        print("My name is", self.name)
+
+student1 = Student("Riaz")
+student2 = Student("Hasib")
+
+student1.introduce()  # My name is Riaz
+student2.introduce()  # My name is Hasib
 ```
 
-### Child classes — method overriding
+একই method, কিন্তু object আলাদা বলে output আলাদা।
+
+### Instance method
+
+Class-এর ভিতরে `self` parameter-সহ define করা function-কে সাধারণত instance method বলে।
 
 ```python
-class Smart_Phone(Camera):
-    def __init__(self, name, resolution):
-        super().__init__(name)
-        self.resolution = resolution
+class Calculator:
+    def add(self, a, b):
+        return a + b
 
-    # method overriding
-    def capture(self):
-        print("Photo is captured by a Phone")
-
-
-class DSLR(Camera):
-    def __init__(self, name, resolution):
-        super().__init__(name)
-        self.resolution = resolution
-
-    def capture(self):
-        print("Photo is captured by DSLR")
-
-
-class Drone(Camera):
-    def __init__(self, name, resolution):
-        super().__init__(name)
-        self.resolution = resolution
-
-    def capture(self):
-        print("Photo is captured by Drone")
-
-
-phone = Smart_Phone("Phone", 30)
-dslr = DSLR("DSLR", 200)
-drone = Drone("Drone", 150)
-
-phone.capture()
-dslr.capture()
-drone.capture()
+calc = Calculator()
+print(calc.add(10, 20))  # 30
 ```
 
-```text
-Photo is captured by a Phone
-Photo is captured by DSLR
-Photo is captured by Drone
+### Attribute update
+
+```python
+student1.age = 28
+print(student1.age)  # 28
 ```
 
-তিনটাই `capture()` call করেছে, কিন্তু প্রতিটা নিজের মতো কাজ করেছে। Child class parent-এর method **override** করেছে।
-
-```text
-camera.capture()
-   ├── Smart_Phone → "by a Phone"
-   ├── DSLR        → "by DSLR"
-   └── Drone       → "by Drone"
-```
+Object-এর attribute update করা যায়।
 
 ---
 
-## 8.5 — Encapsulation
+## 9.4 OOP Inheritance
 
-Encapsulation মানে data-কে **class-এর ভিতরে লুকিয়ে (private)** রাখা, এবং শুধু নির্দিষ্ট method (getter/setter) দিয়ে access করতে দেওয়া।
+### Inheritance কী?
 
-Python-এ attribute-এর নামের আগে **`__` (double underscore)** দিলে সেটা private হয় — বাইরে থেকে সরাসরি access করা যায় না।
+একটি class অন্য class-এর attributes এবং methods inherit করতে পারে।
+
+যে class inherit করে:
+- Child class / subclass
+
+যে class থেকে inherit করে:
+- Parent class / base class
+
+Real-life example:
+
+```text
+             Vehicle (Parent)
+              /          \
+           Car            Bike
+```
+
+Car এবং Bike — দুটোই Vehicle-এর common behavior reuse করতে পারে।
+
+### Basic example
 
 ```python
-# design
-class Mobile:
-    def __init__(self, name, model, imei):
-        self.__name = name
-        self.__model = model
-        self.__imei = imei  # private
+class Vehicle:
+    def start(self):
+        print("Vehicle started")
 
-    def charge(self):
-        print("phone is charging")
+class Car(Vehicle):
+    def drive(self):
+        print("Car is moving")
 
-    # getter methods — private data পড়ার উপায়
-    def imei_getter(self):
-        return self.__imei
+my_car = Car()
 
-    def model_getter(self):
-        return self.__model
-
-    def name_getter(self):
-        return self.__name
-
-    # setter method — private data change করার উপায়
-    def name_setter(self, name):
-        self.__name = name
-
-
-# outside world (user)
-
-# registration
-iphone = Mobile("Phone", "17", "1xkaf1")
-
-print(iphone.name_getter())
-
-iphone.name_setter("Phitron")
-
-print(iphone.name_getter())
+my_car.start()  # inherited from Vehicle
+my_car.drive()  # defined in Car
 ```
 
-```text
-Phone
-Phitron
+`Car(Vehicle)` মানে Car class, Vehicle class থেকে inherit করছে।
+
+### Method overriding
+
+Child class চাইলে parent class-এর method নিজের মতো redefine করতে পারে।
+
+```python
+class Animal:
+    def sound(self):
+        print("Some sound")
+
+class Dog(Animal):
+    def sound(self):
+        print("Bark")
+
+dog = Dog()
+dog.sound()  # Bark
 ```
 
-- `iphone.__name` সরাসরি লিখলে `AttributeError` আসবে।
-- Getter দিয়ে পড়া যায়, setter দিয়ে change করা যায়।
-- `imei`-এর কোনো setter নেই — মানে IMEI বাইরে থেকে change করা যাবে না। এভাবেই data protect হয়।
+এটাকে method overriding বলে।
 
-```text
-Outside world  →  getter / setter  →  __private data
+### `super()`
+
+Parent class-এর method বা initializer call করতে `super()` ব্যবহার করা যায়।
+
+```python
+class Person:
+    def __init__(self, name):
+        self.name = name
+
+class Developer(Person):
+    def __init__(self, name, language):
+        super().__init__(name)
+        self.language = language
+
+dev = Developer("Riaz", "Python")
+
+print(dev.name)      # Riaz
+print(dev.language)  # Python
 ```
+
+**কখন inheritance?** যখন child class সত্যিই parent class-এর একটি specialized type — অর্থাৎ meaningful “is-a” relationship আছে। শুধু code reuse করার জন্য সবসময় inheritance দরকার হয় না।
 
 ---
 
-## 8.6 — Abstraction
+## 9.5 OOP Polymorphism
 
-Abstraction মানে শুধু **"কী করতে হবে"** define করা, **"কীভাবে করবে"** সেটা child class-কে ঠিক করতে দেওয়া।
+### Polymorphism কী?
 
-Python-এ `abc` module-এর `ABC` আর `@abstractmethod` দিয়ে abstract class বানানো হয়।
+Poly = many, morph = forms।
+
+একই interface/method name বিভিন্ন object-এর জন্য different behavior দিতে পারে।
+
+Example:
+
+```python
+class Dog:
+    def sound(self):
+        print("Bark")
+
+class Cat:
+    def sound(self):
+        print("Meow")
+
+animals = [Dog(), Cat()]
+
+for animal in animals:
+    animal.sound()
+```
+
+Output:
+
+```text
+Bark
+Meow
+```
+
+একই `sound()` call, কিন্তু object অনুযায়ী behavior আলাদা।
+
+### Function polymorphism-এর simple example
+
+```python
+print(len("Python"))       # 6
+print(len([10, 20, 30]))   # 3
+```
+
+একই `len()` function string এবং list—দুটোর length বের করতে পারে।
+
+### Method overriding এবং polymorphism
+
+Inheritance-এ child class method override করলে object অনুযায়ী একই method call-এর different behavior পাওয়া যায়।
+
+---
+
+## 9.6 (Optional) OOP Encapsulation
+
+### Encapsulation কী?
+
+Data এবং সেই data-র উপর কাজ করা methods-কে class-এর মধ্যে organize করা এবং internal details-এ controlled access দেওয়া—এটাই encapsulation-এর মূল ধারণা।
+
+Example:
+
+```python
+class BankAccount:
+    def __init__(self, balance):
+        self._balance = balance
+
+    def deposit(self, amount):
+        if amount > 0:
+            self._balance += amount
+
+    def get_balance(self):
+        return self._balance
+
+account = BankAccount(1000)
+account.deposit(500)
+
+print(account.get_balance())  # 1500
+```
+
+এখানে balance update করার জন্য method ব্যবহার করছি।
+
+### Public, protected convention, private name mangling
+
+Python-এ access modifier-এর ধারণা একটু আলাদা:
+
+```python
+self.name       # public
+self._balance   # internal/protected-style convention
+self.__pin      # name mangling
+```
+
+- `name`: public; সাধারণভাবে access করা যায়।
+- `_balance`: underscore convention—এটিকে internal detail হিসেবে treat করতে বলা হয়; strict restriction নয়।
+- `__pin`: double underscore name mangling করে; এটি complete security/private lock নয়।
+
+**মনে রাখবে:** Python-এ underscore convention মানে programmer-দের জন্য signal; Java/C++-এর মতো strict private enforcement নয়।
+
+---
+
+## 9.7 (Optional) OOP Abstraction
+
+### Abstraction কী?
+
+Complex system-এর internal details hide করে user-কে প্রয়োজনীয় interface দেখানো।
+
+Real-life example:
+
+গাড়ি চালানোর সময় accelerator চাপলে car speed বাড়ে। Engine-এর ভিতরে প্রতিটি mechanical step driver-কে জানতে হয় না।
+
+Programming-এ abstraction:
+- কী কাজ করা যাবে তা interface-এ define করে
+- কীভাবে কাজটি হয় তার internal detail hide/আলাদা রাখে
+
+### Abstract class-এর basic idea
+
+Python-এর `abc` module দিয়ে abstract class তৈরি করা যায়।
 
 ```python
 from abc import ABC, abstractmethod
 
-class Telephone(ABC):
-
+class Shape(ABC):
     @abstractmethod
-    def make_call(self):
+    def area(self):
         pass
 
+class Rectangle(Shape):
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
 
-class Sphone(Telephone):
-    def make_call(self):
-        print("Making a call using SPhone")
+    def area(self):
+        return self.width * self.height
 
-
-class Iphone(Telephone):
-    def make_call(self):
-        print("Making a call using IPhone")
+rectangle = Rectangle(5, 3)
+print(rectangle.area())  # 15
 ```
 
-- `Telephone` হলো abstract class — এটা শুধু বলে "প্রতিটা telephone-এর `make_call()` থাকতে হবে"।
-- `Telephone()` সরাসরি object বানানো যায় না (`TypeError`)।
-- Child class `make_call()` implement না করলে তার object-ও বানানো যাবে না।
+`Shape` বলে দিচ্ছে, subclass-কে `area()` implement করতে হবে।
 
-```python
-ip = Iphone()
-
-ip.make_call()
-```
-
-```text
-Making a call using IPhone
-```
-
-`Iphone` নিজের মতো `make_call()` implement করেছে, তাই object বানানো ও call করা গেছে।
-
----
-
-## Common Confusions
-
-### Class vs Object
-
-```text
-Class  → blueprint (Phone)
-Object → blueprint থেকে বানানো জিনিস (apple, motorola)
-```
-
-### Class attribute vs Instance attribute
-
-```text
-category = "Electronics"   → সব Phone-এর জন্য same
-self.model = model         → প্রতিটা object-এর আলাদা
-```
-
-### `self` কেন লাগে?
-
-Method-কে জানাতে হয় কোন object-এর data নিয়ে কাজ করবে। `apple.capture(10)` আসলে `Phone.capture(apple, 10)`।
-
-### `super()` কী করে?
-
-Parent class-এর method/constructor call করে — parent-এর code আবার লিখতে হয় না।
-
-### `print(obj.method())` → extra `None`
-
-Method যদি শুধু `print` করে আর কিছু `return` না করে, তাহলে `print(obj.method())` লিখলে method-এর output-এর পরে একটা `None` print হয়। শুধু `obj.method()` call করো।
-
-### Overriding vs Overloading
-
-```text
-Overriding → child class parent-এর same-name method নতুন করে লেখে (Python-এ এটাই common)
-Overloading → same নামে ভিন্ন parameter-এর একাধিক method (Python সরাসরি support করে না)
-```
+Abstract class নিজে থেকে incomplete অবস্থায় instantiate করা যায় না।
 
 ### Encapsulation vs Abstraction
 
-```text
-Encapsulation → data লুকানো (__private + getter/setter)
-Abstraction   → implementation লুকানো (abstract method, child implement করে)
-```
+| Encapsulation | Abstraction |
+|---|---|
+| Data + methods organize এবং access control | Unnecessary implementation details hide |
+| “কীভাবে data access/manage হবে?” | “কোন interface ব্যবহার করব?” |
 
 ---
 
-## Quick Practice
+## 9.8 Module Overview
 
-### Q1
+OOP-এর core concepts:
 
-```python
-class Dog:
-    def __init__(self, name):
-        self.name = name
-
-d = Dog("Tommy")
-print(d.name)
+```text
+Class
+  ↓
+Object
+  ↓
+Attributes + Methods
+  ↓
+Inheritance
+  ↓
+Polymorphism
+  ↓
+Encapsulation
+  ↓
+Abstraction
 ```
 
-Output?
+চারটি বহুল পরিচিত OOP pillars:
+1. Encapsulation
+2. Abstraction
+3. Inheritance
+4. Polymorphism
 
-### Q2
+Class এবং object হলো OOP-এর foundation।
+
+---
+
+## 🔗 ML / Data Science Connection
+
+OOP ML project-এ useful হতে পারে।
+
+Example: একটি simple model class
 
 ```python
-class A:
-    def hi(self):
-        print("A")
+class SimpleModel:
+    def __init__(self, weight):
+        self.weight = weight
 
-class B(A):
-    def hi(self):
-        print("B")
+    def predict(self, x):
+        return self.weight * x
 
-B().hi()
+model = SimpleModel(2)
+print(model.predict(5))  # 10
 ```
 
-Output? এটা কোন concept?
+এখানে:
+- `weight` = model-এর state/attribute
+- `predict()` = model-এর behavior/method
 
-### Q3
+বড় ML libraries-এ model, dataset, transformer ইত্যাদি অনেক সময় object/class দিয়ে represent করা হয়।
 
+---
+
+## ❗ Common Confusions
+
+| Concept | মনে রাখবে |
+|---|---|
+| Class | Blueprint/template |
+| Object | Class থেকে তৈরি instance |
+| Attribute | Object-এর data |
+| Method | Object-এর behavior/function |
+| `self` | Current instance |
+| `__init__()` | Object initialize করে |
+| Inheritance | Parent-এর feature child-এ পাওয়া |
+| Overriding | Child-এর method দিয়ে parent method replace করা |
+| Polymorphism | Same interface, different behavior |
+| Encapsulation | Data এবং methods organize; access convention/control |
+| Abstraction | Interface দেখানো, implementation details hide |
+
+---
+
+## 📝 Quick Practice
+
+#### Q1
+OOP-তে class কী?
+
+A. Object-এর blueprint  
+B. শুধু variable  
+C. শুধু loop
+
+#### Q2
+Class থেকে তৈরি actual instance-কে কী বলে?
+
+A. Method  
+B. Object  
+C. Parameter
+
+#### Q3
+`self` কী refer করে?
+
+A. Parent class সবসময়  
+B. Current object/instance  
+C. Python interpreter
+
+#### Q4
 ```python
-class A:
-    def hi(self):
-        print("A")
+class Animal:
+    def sound(self):
+        print("Sound")
 
-class B(A):
+class Dog(Animal):
     pass
 
-B().hi()
+dog = Dog()
+dog.sound()
 ```
 
-Output?
+এখানে `Dog` কোন class থেকে inherit করছে?
 
-### Q4
+#### Q5
+Child class parent-এর method নিজের মতো redefine করলে তাকে কী বলে?
 
-```python
-class Bank:
-    def __init__(self):
-        self.__balance = 100
+A. Slicing  
+B. Overriding  
+C. Indexing
 
-b = Bank()
-print(b.__balance)
-```
+#### Q6
+একই method call-এ different object different behavior দেখালে সেটা কোন concept?
 
-কী হবে?
+A. Polymorphism  
+B. File handling  
+C. Looping
 
-### Q5
+#### Q7
+Python-এ `_balance` সাধারণত কী বোঝায়?
 
-Abstract class থেকে সরাসরি object বানালে কী হয়?
+A. Internal use-এর convention  
+B. Fully secure private variable  
+C. Integer variable
 
-### Q6
+#### Q8
+Abstract class-এর জন্য কোন module ব্যবহার করা যায়?
 
-```python
-class Phone:
-    category = "Electronics"
-
-p1 = Phone()
-p2 = Phone()
-print(p1.category == p2.category)
-```
-
-Output?
+A. `math`  
+B. `abc`  
+C. `random`
 
 ### Answers
 
-1. **`Tommy`**
-2. **`B`** — Method overriding / Polymorphism
-3. **`A`** — Inheritance (parent-এর method পেয়েছে)
-4. **`AttributeError`** — `__balance` private (Encapsulation)
-5. **`TypeError`** — abstract class instantiate করা যায় না
-6. **`True`** — class attribute সবার জন্য same
+1. **A — Blueprint**
+2. **B — Object**
+3. **B — Current instance**
+4. **Animal**
+5. **B — Overriding**
+6. **A — Polymorphism**
+7. **A — Internal-use convention**
+8. **B — `abc`**
 
 ---
 
-## Final Cheat Sheet
+## 🎯 Final Cheat Sheet
 
-| Concept | Core idea |
+| Topic | Core idea |
 |---|---|
-| `class` | Blueprint |
-| Object | Class-এর instance |
-| `__init__` | Constructor — object বানানোর সময় চলে |
-| `self` | Current object |
-| Class attribute | সব object-এ common |
-| Instance attribute | `self.x` — object-এর নিজস্ব |
-| Method | Class-এর ভিতরের function |
-| Inheritance | `class Child(Parent)` |
-| `super()` | Parent-এর method/constructor call |
-| Multiple inheritance | `class C(A, B)` |
-| Polymorphism | Same method, different behavior |
-| Method overriding | Child-এ same-name method নতুন করে লেখা |
-| Encapsulation | `__private` + getter/setter |
-| Abstraction | `ABC` + `@abstractmethod` |
+| OOP | Object-based programming style |
+| Class | Blueprint |
+| Object | Instance |
+| Attribute | Data/state |
+| Method | Behavior/action |
+| `__init__()` | Initialize object |
+| `self` | Current instance |
+| Inheritance | Reuse/extend parent class |
+| `super()` | Parent implementation access |
+| Overriding | Child redefines inherited method |
+| Polymorphism | Same interface, different behavior |
+| Encapsulation | Bundle data + behavior; controlled access |
+| Abstraction | Expose interface, hide details |
 
 ### One-line Mental Model
 
-> **OOP = class (blueprint) থেকে object বানানো; inheritance দিয়ে reuse, polymorphism দিয়ে flexibility, encapsulation দিয়ে protection, abstraction দিয়ে simplicity।**
+> **Class হলো blueprint, object হলো তৈরি instance; আর OOP-এর চার pillar—Encapsulation, Abstraction, Inheritance, Polymorphism—code-কে organized, reusable এবং extensible করতে সাহায্য করে।**
