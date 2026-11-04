@@ -5,12 +5,28 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, MessageCircle, Send, Square, Trash2, X } from "lucide-react";
+import {
+  Bot,
+  ChevronDown,
+  Maximize2,
+  MessageCircle,
+  Minimize2,
+  Send,
+  Square,
+  Trash2,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Message = { role: "user" | "assistant"; content: string };
 
-const MODEL = "openai/gpt-oss-120b";
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const FALLBACK_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"];
+const STORAGE_KEY = "ml-chatbot-model";
+
+// Groq's /models list also returns speech, transcription and safety-filter
+// models; none of them can hold a chat, so keep them out of the picker.
+const NON_CHAT = /whisper|orpheus|tts|prompt-guard|safeguard|guard/i;
 
 const SUGGESTIONS = [
   "Gradient descent সহজ ভাষায় বোঝাও",
@@ -31,6 +47,7 @@ function systemPrompt(pathname: string) {
 export function MlChatbot() {
   const pathname = usePathname() || "/ai/ml";
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -38,6 +55,45 @@ export function MlChatbot() {
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [models, setModels] = useState<string[]>(FALLBACK_MODELS);
+  const [model, setModel] = useState(DEFAULT_MODEL);
+
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(STORAGE_KEY);
+    } catch {
+      // storage unavailable — keep default
+    }
+    const pick = (ids: string[]) =>
+      saved && ids.includes(saved)
+        ? saved
+        : ids.includes(DEFAULT_MODEL)
+          ? DEFAULT_MODEL
+          : ids[0];
+
+    fetch("/api/ai/groq/models")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const ids: string[] = (data?.data ?? [])
+          .map((m: { id: string }) => m.id)
+          .filter((id: string) => !NON_CHAT.test(id))
+          .sort();
+        const list = ids.length > 0 ? ids : FALLBACK_MODELS;
+        setModels(list);
+        setModel(pick(list));
+      })
+      .catch(() => setModel(pick(FALLBACK_MODELS)));
+  }, []);
+
+  function changeModel(id: string) {
+    setModel(id);
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -45,11 +101,24 @@ export function MlChatbot() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      // First Esc leaves the big view, second one closes the chat.
+      if (expanded) setExpanded(false);
+      else setOpen(false);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [expanded]);
+
+  // Stop the lesson behind the big view from scrolling.
+  useEffect(() => {
+    if (!(open && expanded)) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open, expanded]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -74,7 +143,7 @@ export function MlChatbot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: next,
-          model: MODEL,
+          model,
           temperature: 0.5,
           system: systemPrompt(pathname),
         }),
@@ -142,7 +211,21 @@ export function MlChatbot() {
 
   return (
     // Below lg the lesson TOC button owns bottom-right, so sit above it there.
-    <div className="fixed right-5 bottom-20 z-40 lg:bottom-5">
+    // Big view sits above the sticky nav (z-50) and reading bar (z-60).
+    <div className={cn("fixed right-5 bottom-20 lg:bottom-5", expanded ? "z-[70]" : "z-40")}>
+      <AnimatePresence>
+        {open && expanded && (
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setExpanded(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            aria-hidden
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {open && (
           <motion.div
@@ -150,7 +233,12 @@ export function MlChatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.97 }}
             transition={{ duration: 0.18 }}
-            className="absolute right-0 bottom-full mb-3 flex h-[min(34rem,calc(100vh-8rem))] w-[min(24rem,calc(100vw-2.5rem))] origin-bottom-right flex-col overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl backdrop-blur-xl"
+            className={cn(
+              "flex flex-col overflow-hidden rounded-2xl border border-border bg-background/95 shadow-2xl backdrop-blur-xl",
+              expanded
+                ? "fixed inset-3 m-auto max-w-4xl sm:inset-8"
+                : "absolute right-0 bottom-full mb-3 h-[min(34rem,calc(100vh-8rem))] w-[min(24rem,calc(100vw-2.5rem))] origin-bottom-right"
+            )}
             role="dialog"
             aria-label="ML AI assistant"
           >
@@ -161,8 +249,33 @@ export function MlChatbot() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold leading-tight">ML Tutor</p>
-                <p className="text-[11px] text-muted-foreground">Powered by Groq · GPT-OSS 120B</p>
+                <label className="relative mt-0.5 flex max-w-full items-center gap-1 text-[11px] text-muted-foreground">
+                  <span className="shrink-0">Groq ·</span>
+                  <select
+                    value={model}
+                    onChange={(e) => changeModel(e.target.value)}
+                    disabled={isStreaming}
+                    aria-label="Choose model"
+                    className="min-w-0 cursor-pointer appearance-none truncate bg-transparent pr-4 font-medium text-foreground outline-none hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {models.map((id) => (
+                      <option key={id} value={id} className="bg-background text-foreground">
+                        {id}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-0 size-3" />
+                </label>
               </div>
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                aria-label={expanded ? "Shrink chat" : "Expand chat"}
+                title={expanded ? "ছোট করো" : "বড় করে দেখো"}
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              >
+                {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </button>
               {messages.length > 0 && (
                 <button
                   type="button"
@@ -212,7 +325,8 @@ export function MlChatbot() {
                 >
                   <div
                     className={cn(
-                      "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm",
+                      "rounded-2xl px-3.5 py-2 text-sm",
+                      expanded ? "max-w-[80%] sm:px-4 sm:py-2.5 sm:text-[15px]" : "max-w-[85%]",
                       m.role === "user"
                         ? "bg-foreground text-background"
                         : "bg-muted/40 text-foreground"
@@ -294,7 +408,10 @@ export function MlChatbot() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close AI chat" : "Open AI chat"}
-        className="flex size-12 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg shadow-orange-500/30 transition-transform hover:scale-105 active:scale-95"
+        className={cn(
+          "flex size-12 items-center justify-center rounded-full bg-orange-500 text-white shadow-lg shadow-orange-500/30 transition-transform hover:scale-105 active:scale-95",
+          open && expanded && "hidden"
+        )}
       >
         {open ? <X className="size-5" /> : <MessageCircle className="size-5" />}
       </button>
