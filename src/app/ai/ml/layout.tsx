@@ -1,5 +1,6 @@
 import { Hind_Siliguri } from "next/font/google";
 import { MlChatbot } from "@/components/ai/ml-chatbot";
+import { BackToTop } from "@/components/back-to-top";
 
 // Geist has no Bengali glyphs; listing Hind Siliguri after it lets the Bangla
 // text in notes and the routine fall through to a face designed for it.
@@ -16,6 +17,7 @@ export default function MlLayout({ children }: { children: React.ReactNode }) {
       style={{ fontFamily: "var(--font-sans), var(--font-bangla), sans-serif" }}
     >
       {children}
+      <BackToTop />
       <MlChatbot />
     </div>
   );

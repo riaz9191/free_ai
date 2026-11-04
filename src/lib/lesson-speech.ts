@@ -140,6 +140,10 @@ function toSections(markdown: string, lessonTitle: string): RawSection[] {
   }
   flush();
 
+  // Lines with nothing speakable (e.g. a "| ... | ... |" table row) are dropped.
+  for (const s of sections) {
+    s.paragraphs = s.paragraphs.filter((p) => /[\p{L}\p{N}]/u.test(p));
+  }
   return sections.filter((s) => s.paragraphs.some((p) => p !== CODE_NOTE) || s.id);
 }
 

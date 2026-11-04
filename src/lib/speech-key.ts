@@ -7,6 +7,8 @@
 export function speechKey(text: string, length = 24): string {
   return text
     .toLowerCase()
+    // Emoji variation selectors / joiners count as marks (\p{M}); drop them first.
+    .replace(/[\uFE00-\uFE0F\u200D]/g, "")
     .replace(/[^\p{L}\p{M}\p{N}]/gu, "")
     .slice(0, length);
 }
