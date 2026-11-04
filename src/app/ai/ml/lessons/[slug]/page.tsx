@@ -7,10 +7,12 @@ import { ArrowLeft, ArrowRight, BookOpenText, Clock, ListTree } from "lucide-rea
 import { CodeBlock } from "@/components/code-block";
 import { LessonListen } from "@/components/lesson-listen";
 import { LessonMobileNav } from "@/components/lesson-mobile-nav";
+import { LessonStudio } from "@/components/lesson-studio";
 import { LessonToc, LessonTocMobile } from "@/components/lesson-toc";
 import { ReadingProgress } from "@/components/reading-progress";
 import { LESSONS, getLesson } from "@/data/lessons";
 import { EMPTY_LESSON_NOTE, getLessonContent, hasAltContent } from "@/lib/lessons-content";
+import { splitSections } from "@/lib/lesson-sections";
 import { buildSpeechChunks } from "@/lib/lesson-speech";
 import { CATEGORY_STYLE } from "@/lib/lesson-style";
 import { extractToc } from "@/lib/toc";
@@ -125,6 +127,11 @@ export default async function LessonPage({
   const ready = content !== EMPTY_LESSON_NOTE;
   const words = content.split(/\s+/).filter(Boolean).length;
   const minutes = Math.max(1, Math.round(words / 200));
+  const studioSections = ready
+    ? splitSections(content, lesson.title)
+        .filter((s) => s.id || s.body.length > 200)
+        .map((s) => ({ id: s.id ?? "intro", title: s.id ? s.title : "শুরুর অংশ" }))
+    : [];
   // Only ids/titles/hashes go to the client; the route rebuilds the text itself.
   const listenChunks = ready
     ? buildSpeechChunks(content, lesson.title).map(({ sectionId, sectionTitle, hash, paras }) => ({
@@ -189,6 +196,14 @@ export default async function LessonPage({
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
+                {ready && (
+                  <LessonStudio
+                    key={`studio-${slug}-${showAlt && alt ? "alt" : "main"}`}
+                    slug={slug}
+                    variant={showAlt && alt ? "alt" : undefined}
+                    sections={studioSections}
+                  />
+                )}
                 {ready && (
                   <LessonListen
                     key={`${slug}-${showAlt && alt ? "alt" : "main"}`}
