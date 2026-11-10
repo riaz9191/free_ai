@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 type Employee = { id: string; name: string; department: string; birthday: string };
-type Office = { name: string; notifyEmail: string };
+type Office = { name: string; notifyEmail: string; showAges: boolean };
 
 // ---------- date helpers (browser local time) ----------
 const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
@@ -46,7 +46,15 @@ const nextBday = (b: string, from: Date) => {
   return n < t ? bdayIn(b, t.getFullYear() + 1) : n;
 };
 const daysUntil = (b: string, from: Date) => Math.round((nextBday(b, from).getTime() - startOfDay(from).getTime()) / 864e5);
-const ageOn = (b: string, d: Date) => d.getFullYear() - parts(b).y;
+/** Age reached on date d, or null when the birth year is unknown (stored as 0000). */
+/** 0 right after the last birthday → 1 on the birthday itself. */
+const yearProgress = (b: string, from: Date) => {
+  const next = nextBday(b, from);
+  const prev = bdayIn(b, next.getFullYear() - 1);
+  return (startOfDay(from).getTime() - prev.getTime()) / (next.getTime() - prev.getTime());
+};
+const ageOn = (b: string, d: Date) => (parts(b).y ? d.getFullYear() - parts(b).y : null);
+const MONTH_NAMES = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleDateString("en-GB", { month: "long" }));
 const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 const fmt = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString("en-GB", o);
@@ -150,7 +158,7 @@ function useConfetti() {
 // ---------- page ----------
 export default function BirthdayPage() {
   const [now, setNow] = useState<Date | null>(null);
-  const [office, setOffice] = useState<Office>({ name: "", notifyEmail: "" });
+  const [office, setOffice] = useState<Office>({ name: "", notifyEmail: "", showAges: false });
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [smtp, setSmtp] = useState(false);
   const [admin, setAdmin] = useState(false);
@@ -198,6 +206,8 @@ export default function BirthdayPage() {
   }, [refresh]);
 
   const today = now ? startOfDay(now) : null;
+  // Admins always see ages; visitors only when the admin has turned ages on.
+  const showAges = admin || office.showAges;
   const todayKey = today?.toDateString();
 
   const todays = useMemo(
@@ -335,7 +345,7 @@ export default function BirthdayPage() {
           className="mt-8"
         >
           {today && loaded && (
-            <Hero today={today} todays={todays} upcoming={upcoming} office={office} onCelebrate={() => fire(280)} onAdd={admin ? () => setEditing("new") : undefined} empty={!employees.length} />
+            <Hero today={today} todays={todays} upcoming={upcoming} office={office} showAges={showAges} onCelebrate={() => fire(280)} onAdd={admin ? () => setEditing("new") : undefined} empty={!employees.length} />
           )}
           {!loaded && <div className="h-56 animate-pulse rounded-3xl border border-border bg-muted/20" />}
         </motion.div>
@@ -368,7 +378,7 @@ export default function BirthdayPage() {
               </div>
             </div>
             <MonthGrid view={view} today={today} employees={employees} onPick={(d, ppl) =>
-              notify(`🎂 ${fmt(d, { day: "numeric", month: "long" })}: ${ppl.map((p) => `${p.name} (turns ${ageOn(p.birthday, d)})`).join(", ")}`)
+              notify(`🎂 ${fmt(d, { day: "numeric", month: "long" })}: ${ppl.map((p) => (showAges && ageOn(p.birthday, d) !== null ? `${p.name} (turns ${ageOn(p.birthday, d)})` : p.name)).join(", ")}`)
             } />
           </section>
 
@@ -390,7 +400,8 @@ export default function BirthdayPage() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold">{e.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {fmt(nd, { weekday: "short", day: "numeric", month: "short" })} · turns {ageOn(e.birthday, nd)}
+                          {fmt(nd, { weekday: "short", day: "numeric", month: "short" })}
+                          {showAges && ageOn(e.birthday, nd) !== null && ` · turns ${ageOn(e.birthday, nd)}`}
                         </div>
                       </div>
                       <DaysPill days={days} />
@@ -438,7 +449,9 @@ export default function BirthdayPage() {
                       {fmt(bdayIn(e.birthday, 2024), { day: "numeric", month: "long" })}
                       {e.department && ` · ${e.department}`}
                     </div>
+                    {today && <BirthdayProgress birthday={e.birthday} today={today} />}
                   </div>
+                  {today && <DaysPill days={daysUntil(e.birthday, today)} />}
                   {admin && (
                   <div className="flex opacity-60 transition group-hover:opacity-100">
                     <IconBtn label={`Edit ${e.name}`} onClick={() => setEditing(e)} ghost>
@@ -543,6 +556,33 @@ function IconBtn({ label, onClick, children, ghost }: { label: string; onClick: 
   );
 }
 
+function BirthdayProgress({ birthday, today }: { birthday: string; today: Date }) {
+  const days = daysUntil(birthday, today);
+  const pct = days === 0 ? 100 : Math.max(2, Math.round(yearProgress(birthday, today) * 100));
+  return (
+    <div
+      className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted/40"
+      role="progressbar"
+      aria-label={days === 0 ? "Birthday today" : `${days} days until birthday`}
+      aria-valuenow={pct}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      title={days === 0 ? "Birthday today!" : `${days} days to go · ${pct}% of the way there`}
+    >
+      <motion.div
+        className={cn(
+          "h-full rounded-full bg-gradient-to-r",
+          days <= 1 ? "from-pink-500 to-rose-500" : days <= 7 ? "from-amber-500 to-pink-500" : "from-pink-500/70 to-amber-500/70"
+        )}
+        initial={{ width: 0 }}
+        whileInView={{ width: `${pct}%` }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.9, ease: EASE }}
+      />
+    </div>
+  );
+}
+
 function DaysPill({ days }: { days: number }) {
   if (days === 0)
     return <span className="rounded-full bg-gradient-to-r from-pink-500 to-amber-500 px-2.5 py-1 text-xs font-bold whitespace-nowrap text-white">🎉 Today</span>;
@@ -563,8 +603,9 @@ function DaysPill({ days }: { days: number }) {
 const BALLOONS = ["#fde047", "#f9a8d4", "#a5f3fc", "#ffffff", "#c4b5fd", "#fdba74", "#86efac", "#fecdd3"];
 
 function Hero({
-  today, todays, upcoming, office, onCelebrate, onAdd, empty,
+  today, todays, upcoming, office, showAges, onCelebrate, onAdd, empty,
 }: {
+  showAges: boolean;
   today: Date;
   todays: Employee[];
   upcoming: { e: Employee; days: number }[];
@@ -615,7 +656,9 @@ function Hero({
                 <div>
                   <div className="font-semibold">{e.name}</div>
                   <div className="text-xs opacity-90">
-                    {e.department && `${e.department} · `}turns {ageOn(e.birthday, today)} today
+                    {showAges && ageOn(e.birthday, today) !== null
+                      ? `${e.department ? `${e.department} · ` : ""}turns ${ageOn(e.birthday, today)} today`
+                      : e.department || "Birthday today 🎈"}
                   </div>
                 </div>
               </div>
@@ -803,7 +846,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function EmployeeModal({ employee, onClose, onSaved }: { employee: Employee | null; onClose: () => void; onSaved: (name: string) => void }) {
   const [name, setName] = useState(employee?.name ?? "");
   const [department, setDepartment] = useState(employee?.department ?? "");
-  const [birthday, setBirthday] = useState(employee?.birthday ?? "");
+  const initial = employee ? parts(employee.birthday) : null;
+  const [month, setMonth] = useState(initial ? String(initial.m + 1) : "");
+  const [day, setDay] = useState(initial ? String(initial.d) : "");
+  const [year, setYear] = useState(initial?.y ? String(initial.y) : "");
+  const thisYear = new Date().getFullYear();
+  // Unknown year → allow Feb 29.
+  const maxDay = month ? new Date(Number(year) || 2000, Number(month), 0).getDate() : 31;
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -812,6 +861,7 @@ function EmployeeModal({ employee, onClose, onSaved }: { employee: Employee | nu
     setBusy(true);
     setError("");
     try {
+      const birthday = `${(year || "0").padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
       const body = { name, department, birthday };
       if (employee) await api(`/api/birthday/employees/${employee.id}`, { method: "PUT", body });
       else await api("/api/birthday/employees", { method: "POST", body });
@@ -831,9 +881,41 @@ function EmployeeModal({ employee, onClose, onSaved }: { employee: Employee | nu
         <Field label="Department (optional)">
           <input className={inputCls} maxLength={60} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Engineering" />
         </Field>
-        <Field label="Date of birth">
-          <input className={inputCls} type="date" required value={birthday} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirthday(e.target.value)} />
-        </Field>
+        <div className="grid grid-cols-[1.4fr_0.8fr_1fr] gap-2">
+          <Field label="Month">
+            <select className={inputCls} required value={month} onChange={(e) => {
+                const m = e.target.value;
+                const max = new Date(Number(year) || 2000, Number(m), 0).getDate();
+                setMonth(m);
+                if (Number(day) > max) setDay(String(max));
+              }}>
+              <option value="" disabled>Month</option>
+              {MONTH_NAMES.map((m, i) => (
+                <option key={m} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Day">
+            <select className={inputCls} required value={day} onChange={(e) => setDay(e.target.value)}>
+              <option value="" disabled>Day</option>
+              {Array.from({ length: maxDay }, (_, i) => (
+                <option key={i + 1} value={i + 1}>{i + 1}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Year (optional)">
+            <input
+              className={inputCls}
+              type="number"
+              min={1900}
+              max={thisYear}
+              placeholder="e.g. 1995"
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+            />
+          </Field>
+        </div>
+        <p className="-mt-2 text-xs text-muted-foreground">Leave the year empty if you don&apos;t know it. Age just won&apos;t be shown.</p>
         {error && <p className="text-sm text-rose-400">{error}</p>}
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground">
@@ -897,6 +979,7 @@ function SettingsModal({
 }) {
   const [name, setName] = useState(office.name);
   const [email, setEmail] = useState(office.notifyEmail);
+  const [showAges, setShowAges] = useState(office.showAges);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -906,7 +989,7 @@ function SettingsModal({
     setBusy(true);
     setError("");
     try {
-      await api("/api/birthday", { method: "PUT", body: { name, notifyEmail: email } });
+      await api("/api/birthday", { method: "PUT", body: { name, notifyEmail: email, showAges } });
       onSaved();
     } catch (err) {
       setError((err as Error).message);
@@ -935,6 +1018,20 @@ function SettingsModal({
         <Field label="Send reminders to">
           <input className={inputCls} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={showAges}
+            onChange={(e) => setShowAges(e.target.checked)}
+            className="mt-0.5 size-4 accent-pink-500"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Show ages to everyone</span>
+            <span className="text-xs text-muted-foreground">
+              When off, visitors see names and dates only. Admins always see ages.
+            </span>
+          </span>
+        </label>
         <div
           className={cn(
             "flex gap-2 rounded-xl px-3 py-2.5 text-xs leading-relaxed",

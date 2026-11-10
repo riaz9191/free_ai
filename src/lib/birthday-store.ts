@@ -6,10 +6,10 @@ export type Employee = {
   id: string;
   name: string;
   department: string;
-  birthday: string; // YYYY-MM-DD
+  birthday: string; // YYYY-MM-DD; year "0000" means the birth year is unknown
 };
 
-export type Office = { name: string; notifyEmail: string };
+export type Office = { name: string; notifyEmail: string; showAges: boolean };
 
 type BirthdayData = {
   office: Office;
@@ -26,7 +26,7 @@ const useBlob = Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_ST
 export const OFFICE_TZ = process.env.BIRTHDAY_TZ || "Asia/Dhaka";
 
 const DEFAULT_DATA: BirthdayData = {
-  office: { name: "PEN Global Limited", notifyEmail: "riaz91a@gmail.com" },
+  office: { name: "PEN Global Limited", notifyEmail: "riaz91a@gmail.com", showAges: false },
   employees: [],
   sentReminders: [],
 };
@@ -87,8 +87,11 @@ export function parseEmployee(body: unknown): Omit<Employee, "id"> {
   const birthday = String(b.birthday ?? "").trim();
   const department = String(b.department ?? "").trim().slice(0, 60);
   if (!name) throw new Error("Name is required");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday) || Number.isNaN(Date.parse(birthday))) {
-    throw new Error("Birthday must be a valid date (YYYY-MM-DD)");
+  const [y, m, d] = birthday.split("-").map(Number);
+  // Check the day exists in that month (year 0000 = unknown year; treat as leap so Feb 29 is allowed).
+  const maxDay = new Date(Date.UTC(y === 0 ? 2000 : y, m, 0)).getUTCDate();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday) || m < 1 || m > 12 || d < 1 || d > maxDay) {
+    throw new Error("Birthday must be a valid date");
   }
   return { name, birthday, department };
 }
