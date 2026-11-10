@@ -668,3 +668,388 @@ B. Row-wise mean
 ### One-line Mental Model
 
 > **NumPy = numerical data-কে efficient array-তে রাখা, shape/type বোঝা, প্রয়োজনমতো select করা এবং দ্রুত calculation করা।**
+
+---
+
+## Extra Important NumPy Topics — Detailed Add-on
+
+আগের notes-এ কিছু topic শুধু mention করা হয়েছিল বা বাদ পড়েছিল। নিচে সেগুলো বিস্তারিত যোগ করা হলো। এগুলো screenshot-এর আলাদা lesson title নয়; NumPy ভালোভাবে শেখার জন্য supplementary topics.
+
+### 1. Vectorization
+
+Vectorization হলো manual Python loop না লিখে NumPy array operation দিয়ে একসঙ্গে সব element process করা।
+
+**Normal loop:**
+```python
+numbers = [1, 2, 3, 4]
+result = []
+for n in numbers:
+    result.append(n * 2)
+```
+
+**NumPy vectorized:**
+```python
+import numpy as np
+numbers = np.array([1, 2, 3, 4])
+result = numbers * 2
+print(result)  # [2 4 6 8]
+```
+
+Visual:
+```text
+Input:  [1, 2, 3, 4]
+          × 2
+Output: [2, 4, 6, 8]
+```
+
+আরও examples:
+```python
+a = np.array([10, 20, 30])
+a + 5    # [15, 25, 35]
+a * 2    # [20, 40, 60]
+a ** 2   # [100, 400, 900]
+```
+
+কেন useful: code ছোট হয়, manual loop কমে, এবং numerical operation অনেক ক্ষেত্রে দ্রুত হয়। NumPy optimized compiled code-এর ভিতরে কাজ করে। তবে সব input size/operation-এ speedup guaranteed নয়।
+
+### 2. Broadcasting
+
+Compatible shape-এর array-এর মধ্যে operation করার সময় NumPy ছোট array বা scalar-কে বড় array-এর সঙ্গে মানিয়ে নেয়—এটাই broadcasting।
+
+**Scalar + array:**
+```python
+a = np.array([10, 20, 30])
+print(a + 5)  # [15 25 35]
+```
+
+**একটি row vector + matrix:**
+```python
+A = np.array([[1, 2, 3],
+              [4, 5, 6]])
+b = np.array([10, 20, 30])
+print(A + b)
+```
+Output:
+```text
+[[11 22 33]
+ [14 25 36]]
+```
+
+Broadcasting shape rule: ডান দিক থেকে dimension compare করো। দুই dimension সমান হলে compatible; অথবা একটির dimension `1` হলে সেটি broadcast হতে পারে। কোনো dimension-ই match না করলে error হবে।
+
+```text
+(2, 3) + (1, 3) → valid, result (2, 3)
+(2, 3) + (2, 1) → valid, result (2, 3)
+(2, 3) + (2, 2) → incompatible
+```
+
+### 3. `axis` — Row-wise and Column-wise
+
+```python
+A = np.array([[10, 20, 30],
+              [40, 50, 60]])
+```
+
+`axis=0`: row direction collapse হয়, প্রতিটি column-এর result থাকে।
+```python
+A.sum(axis=0)   # [50, 70, 90]
+A.mean(axis=0)  # [25., 35., 45.]
+```
+
+`axis=1`: column direction collapse হয়, প্রতিটি row-এর result থাকে।
+```python
+A.sum(axis=1)   # [60, 150]
+A.mean(axis=1)  # [20., 50.]
+```
+
+মনে রাখো:
+- `axis=0` → column-wise result
+- `axis=1` → row-wise result
+- `A.sum()` → সব element-এর sum
+
+### 4. Reshape, Flatten and Ravel
+
+`reshape()` element সংখ্যা না বদলে shape বদলায়।
+
+```python
+a = np.array([1, 2, 3, 4, 5, 6])
+print(a.reshape(2, 3))
+```
+Output:
+```text
+[[1 2 3]
+ [4 5 6]]
+```
+
+6 elements-কে `(3, 2)` করা যায়, কিন্তু `(4, 2)` করা যাবে না—কারণ 8টি position লাগবে।
+
+`-1` দিলে NumPy একটি dimension নিজে হিসাব করে:
+```python
+a.reshape(2, -1)  # shape (2, 3)
+```
+
+Flatten:
+```python
+A = np.array([[1, 2], [3, 4]])
+A.flatten()  # [1 2 3 4]
+A.ravel()    # [1 2 3 4]
+```
+- `flatten()` সবসময় copy দেয়।
+- `ravel()` সম্ভব হলে view দেয়; দরকার হলে copy দেয়।
+
+### 5. Transpose
+
+Rows ও columns swap হয়:
+```python
+A = np.array([[1, 2, 3],
+              [4, 5, 6]])
+print(A.T)
+```
+Output:
+```text
+[[1 4]
+ [2 5]
+ [3 6]]
+```
+Shape `(2, 3)` থেকে `(3, 2)` হয়। ML matrix multiplication-এ orientation বোঝার জন্য গুরুত্বপূর্ণ।
+
+### 6. Mathematical and Statistical Operations
+
+```python
+a = np.array([10, 20, 30, 40])
+
+np.sum(a)     # 100
+np.mean(a)    # 25.0
+np.median(a)  # 25.0
+np.min(a)     # 10
+np.max(a)     # 40
+np.std(a)     # standard deviation
+np.var(a)     # variance
+np.sqrt(a)    # element-wise square root
+np.abs([-2, 3])  # [2 3]
+```
+
+`np.log()`, `np.exp()`, `np.sin()`-এর মতো functions-ও array-এর প্রতিটি element-এর উপর কাজ করে। এগুলোকে universal functions বা **ufuncs** বলা হয়।
+
+### 7. Element-wise Multiplication vs Matrix Multiplication
+
+এগুলো এক নয়।
+
+```python
+A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+
+A * B
+# [[ 5 12]
+#  [21 32]]
+```
+`*` একই position-এর element multiply করে।
+
+```python
+A @ B
+# [[19 22]
+#  [43 50]]
+```
+`@` matrix multiplication করে। `np.matmul(A, B)` একই কাজ করে। 2D array-তে `np.dot()`-ও একই ধরনের result দিতে পারে; higher dimensions-এ `dot` ও `matmul` আলাদা হতে পারে।
+
+### 8. Boolean Masking and `where()`
+
+Condition দিয়ে values filter:
+
+```python
+scores = np.array([45, 70, 82, 35, 90])
+mask = scores >= 50
+print(mask)
+# [False True True False True]
+
+print(scores[mask])
+# [70 82 90]
+```
+
+Short form:
+```python
+scores[scores >= 50]
+```
+
+Condition অনুযায়ী output choose:
+```python
+np.where(scores >= 50, "Pass", "Fail")
+```
+
+### 9. Concatenate and Stack
+
+Arrays join করা:
+
+```python
+a = np.array([1, 2])
+b = np.array([3, 4])
+
+np.concatenate((a, b))
+# [1 2 3 4]
+```
+
+2D arrays-এ:
+- `axis=0` → row direction-এ যোগ
+- `axis=1` → column direction-এ যোগ
+
+```python
+A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+
+np.vstack((A, B))  # vertically stack
+np.hstack((A, B))  # horizontally stack
+```
+
+### 10. Sorting, Unique and NaN
+
+```python
+a = np.array([30, 10, 40, 20])
+np.sort(a)  # [10 20 30 40]
+```
+`np.sort(a)` sorted copy দেয়; `a.sort()` original array in-place sort করে।
+
+```python
+np.unique([1, 2, 2, 3, 3])  # [1 2 3]
+```
+
+`NaN` মানে Not a Number; missing/undefined numerical value বোঝাতে পারে:
+```python
+a = np.array([10.0, np.nan, 30.0])
+np.isnan(a)      # [False True False]
+np.nanmean(a)    # 20.0
+```
+NaN থাকলে `np.mean(a)` সাধারণত NaN দেয়; `np.nanmean()` NaN বাদ দিয়ে mean করে।
+
+### 11. Modern Random Generator
+
+`np.random.seed()` শেখার জন্য ঠিক আছে। নতুন code-এ Generator API ব্যবহার করতে পারো:
+
+```python
+rng = np.random.default_rng(42)
+rng.integers(1, 10, size=5)  # 1..9 থেকে 5টি integer
+rng.random(3)                # 0 থেকে 1-এর মধ্যে 3টি float
+```
+
+একই seed দিলে reproducible sequence পাওয়া যায়।
+
+### 12. Performance Basics
+
+```python
+import time
+import numpy as np
+
+a = np.arange(1_000_000)
+
+start = time.perf_counter()
+result = a * 2
+elapsed = time.perf_counter() - start
+print(elapsed)
+```
+
+Benchmark-এ একই কাজ ও একই input compare করবে। Machine load, data size এবং operation অনুযায়ী timing বদলায়।
+
+### 13. ML Connection — Weighted Sum
+
+```python
+X = np.array([[1000, 2],
+              [1500, 3],
+              [2000, 4]])
+
+weights = np.array([0.05, 2])
+predictions = X @ weights
+print(predictions)
+```
+
+- `X` = samples × features
+- `weights` = feature weights
+- `X @ weights` = প্রতিটি sample-এর weighted sum
+
+এটি Linear Regression-এর basic calculation-এর সঙ্গে সম্পর্কিত।
+
+---
+
+## Extra Topics — Quick Practice
+
+**Q1**
+```python
+a = np.array([2, 4, 6])
+print(a * 3)
+```
+Output?
+
+**Q2**
+```python
+A = np.array([[1, 2], [3, 4]])
+print(A + 10)
+```
+Output?
+
+**Q3**
+```python
+A = np.array([[1, 2, 3], [4, 5, 6]])
+print(A.sum(axis=0))
+```
+Output?
+
+**Q4** 6 elements-কে 3 rows-এ reshape করলে shape কী?
+
+**Q5** `(2, 4)` shape transpose করলে কী হবে?
+
+**Q6** `A * B` এবং `A @ B` কি একই?
+
+**Q7**
+```python
+a = np.array([3, 8, 2, 9])
+print(a[a > 5])
+```
+Output?
+
+**Q8**
+```python
+np.unique([1, 1, 2, 3, 3])
+```
+Output?
+
+#### Answers
+1. `[6, 12, 18]`
+2. `[[11, 12], [13, 14]]`
+3. `[5, 7, 9]`
+4. `(3, 2)` — 6 elements হলে
+5. `(4, 2)`
+6. না। `*` element-wise; `@` matrix multiplication
+7. `[8, 9]`
+8. `[1, 2, 3]`
+
+---
+
+## NumPy Learning Checklist
+
+**Screenshot-এর visible syllabus**
+- [ ] NumPy introduction
+- [ ] ndarray and attributes
+- [ ] ndarray data types
+- [ ] Existing data থেকে array creation
+- [ ] Random array generation
+- [ ] `arange()` / range-based creation
+- [ ] Indexing and slicing
+- [ ] Copy, advanced indexing and iteration
+- [ ] Module overview and quiz
+
+**Extra important foundations**
+- [ ] Vectorization
+- [ ] Broadcasting
+- [ ] `axis=0` and `axis=1`
+- [ ] Reshape, flatten, ravel
+- [ ] Transpose
+- [ ] Mathematical/statistical operations and ufuncs
+- [ ] Element-wise vs matrix multiplication
+- [ ] Boolean masking and `where()`
+- [ ] Concatenate and stack
+- [ ] Sorting, unique and NaN
+- [ ] Modern random Generator
+- [ ] Performance basics
+- [ ] ML weighted-sum connection
+
+### Final Mental Model
+
+> NumPy শুধু array বানানোর library নয়। এটি shape/type manage করে, vectorized calculation, broadcasting, filtering, reshaping, aggregation এবং matrix operations-এর মাধ্যমে ML-এর numerical foundation তৈরি করে।
